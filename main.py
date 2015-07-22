@@ -126,7 +126,7 @@ def clean(cleanstr):
     return cleanstr
 
 sock = socket.socket()
-sock.connect((args.server, args.port))
+sock.connect((args.server, int(args.port)))
 for i in nodes:
     if 'clientcount' in nodes[i]:
         message = "node.%s.count %s %d\n" %(i,nodes[i]['clientcount'], int(time.time()))
