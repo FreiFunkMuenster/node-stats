@@ -38,9 +38,6 @@ locationcount=0
 
 
 dataJson = check_output(["alfred-json", "-z","-r","159"])
-for l in open("slfred_159.json"):
-    dataJson += l
-
 data = json.loads(dataJson)
 
 for id in data:
