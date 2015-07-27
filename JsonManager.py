@@ -35,8 +35,8 @@ class JsonManager:
         self.json159 =json.loads(data)
 
     def loadJsonFromAlfred(self):
-        self.json158 = json.loads(check_output(["alfred-json", "-z","-r","158"]))
-        self.json159 = json.loads(check_output(["alfred-json", "-z","-r","159"]))
+        self.json158 = json.loads(check_output(["alfred-json", "-z","-r","158"]).decode("utf-8"))
+        self.json159 = json.loads(check_output(["alfred-json", "-z","-r","159"]).decode("utf-8"))
 
     def processJson159(self):
         self.result['nodes'] = {}

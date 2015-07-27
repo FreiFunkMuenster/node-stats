@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser(description='This Script gets information about
 parser.add_argument('-server', required=True, help='Server')
 parser.add_argument('-port', required=True, help='Port', default=2003)
 parser.add_argument('--local', help='Load local json files (alfred_158.json,alfred_159.json)', action='store_true')
-parser.add_argument('--print-only', help='Load local json files (alfred_158.json,alfred_159.json)', action='store_true')
+parser.add_argument('--print-only', help='Print only', action='store_true')
 args = parser.parse_args()
 
 jsonManager = JsonManager()
@@ -33,7 +33,6 @@ else:
     jsonManager.loadJsonFromAlfred()
 jsonManager.processJson158()
 jsonManager.processJson159()
-
 
 graphiteManager = GraphiteManager(args.server, args.port)
 graphiteManager.prepareMessage(jsonManager.result)
