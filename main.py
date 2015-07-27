@@ -37,7 +37,7 @@ jsonManager.processJson159()
 
 graphiteManager = GraphiteManager(args.server, args.port)
 graphiteManager.prepareMessage(jsonManager.result)
-if args.print_only:
-    graphiteManager.print()
-else:
+# if args.print_only:
+#     graphiteManager.print()
+# else:
     graphiteManager.send()
