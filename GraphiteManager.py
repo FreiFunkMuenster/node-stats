@@ -43,7 +43,7 @@ class GraphiteManager:
         sock.close()
         pass
 
-    def print(self):
+    def printout(self):
         print(self.message)
 
     def __addSingleMessage__(self,key,value):
