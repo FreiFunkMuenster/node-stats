@@ -97,7 +97,7 @@ class JsonManager:
                 self.result[key] = 0
             self.result[key]+=1
         else:
-            value = JsonManager.___cleanstr___(value)
+            value = self.___cleanstr___(value)
             if key not in self.result:
                 self.result[key] = {}
             if value in self.result[key]:
@@ -105,7 +105,7 @@ class JsonManager:
             else:
                 self.result[key][value]=1
 
-    def ___cleanstr___(cleanstr):
+    def ___cleanstr___(self, cleanstr):
         specialChars = [" ","+",".","\\","/","-"]
         for char in specialChars:
             cleanstr = cleanstr.replace(char,"_")
