@@ -26,17 +26,17 @@ class JsonManager:
 
     def loadJson(self):
         data=""
-        for l in open("slfred_158.json"):
+        for l in open("alfred_158.json"):
             data += l
         self.json158 = json.loads(data)
         data=""
-        for l in open("slfred_159.json"):
+        for l in open("alfred_159.json"):
             data += l
         self.json159 =json.loads(data)
 
-    def loadJsonFromAlfred(self):
-        self.json158 = json.loads(check_output(["alfred-json", "-z","-r","158"]).decode("utf-8"))
-        self.json159 = json.loads(check_output(["alfred-json", "-z","-r","159"]).decode("utf-8"))
+    def loadJsonFromAlfred(self, socket):
+        self.json158 = json.loads(check_output(["alfred-json", "-z","-r","158","-s",socket]).decode("utf-8"))
+        self.json159 = json.loads(check_output(["alfred-json", "-z","-r","159","-s",socket]).decode("utf-8"))
 
     def processJson159(self):
         self.result['nodes'] = {}
@@ -46,7 +46,7 @@ class JsonManager:
 
     # Nodes/Gateway
             try:
-                if 'mesh_vpn' in node:
+                if 'mesh_vpn' in node and 'backbone' in node['mesh_vpn']['groups']:
                     peers = node['mesh_vpn']['groups']['backbone']['peers']
                     for x in peers:
                         if peers[x]:

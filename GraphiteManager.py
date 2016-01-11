@@ -17,9 +17,10 @@ import socket
 import time
 
 class GraphiteManager:
-    def __init__(self,server,port):
+    def __init__(self,server,port,domain):
         self.server = server
         self.port = port
+        self.domain = domain
         self.message = ""
 
     def prepareMessage(self, data):
@@ -27,14 +28,14 @@ class GraphiteManager:
             if 'clients' in data['nodes'][i]:
                self.__addSingleMessage__("node.%s.count" % i, data['nodes'][i]['clients'])
 
-        self.__addDictMessage__("nodes.firmware.%s.count",data['firmwarecount'])
-        self.__addDictMessage__("nodes.branch.%s.count", data['branchcount'])
-        self.__addDictMessage__("nodes.hardware.%s.count", data['hardwarecount'])
+        self.__addDictMessage__("nodes."+self.domain+".firmware.%s.count",data['firmwarecount'])
+        self.__addDictMessage__("nodes."+self.domain+".branch.%s.count", data['branchcount'])
+        self.__addDictMessage__("nodes."+self.domain+".hardware.%s.count", data['hardwarecount'])
 
-        self.__addSingleMessage__("nodes.autoupdate.count",data['autoupdate'])
-        self.__addSingleMessage__("nodes.location.count",data['locationcount'])
-        self.__addSingleMessage__("nodes.total.count",data['nodecount'])
-        self.__addSingleMessage__("nodes.totalclient.count",data['totalclients'])
+        self.__addSingleMessage__("nodes."+self.domain+".autoupdate.count",data['autoupdate'])
+        self.__addSingleMessage__("nodes."+self.domain+".location.count",data['locationcount'])
+        self.__addSingleMessage__("nodes."+self.domain+".total.count",data['nodecount'])
+        self.__addSingleMessage__("nodes."+self.domain+".totalclient.count",data['totalclients'])
 
     def send(self):
         sock = socket.socket()
