@@ -75,12 +75,12 @@ class JsonManager:
             if 'software' in node:
                 firmware = node['software']['firmware']['release']
                 self.__incCounter__('firmwarecount',firmware)
+                if 'autoupdater' in node['software']:
+		    branch = node['software']['autoupdater']['branch']
+		    self.__incCounter__('branchcount',branch)
 
-                branch = node['software']['autoupdater']['branch']
-                self.__incCounter__('branchcount',branch)
-
-                if node['software']['autoupdater']['enabled']:
-                    self.__incCounter__('autoupdate')
+		    if node['software']['autoupdater']['enabled']:
+			self.__incCounter__('autoupdate')
 
             if 'hardware' in node:
                 hardware = node['hardware']['model']
