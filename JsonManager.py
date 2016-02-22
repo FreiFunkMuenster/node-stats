@@ -60,8 +60,8 @@ class JsonManager:
                 id = node['node_id']
                 self.result['nodes'][id] = {}
                 if 'clients' in node:
-                    self.result['nodes'][id]["clients"] = node['clients']['wifi']
-                    self.result['totalclients'] += node['clients']['wifi']
+                    self.result['nodes'][id]["clients"] = node['clients']['total']
+                    self.result['totalclients'] += node['clients']['total']
             except:
                 sys.stderr.write("Error %s" % sys.exc_info()[0])
 
