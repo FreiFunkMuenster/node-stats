@@ -42,6 +42,7 @@ class JsonManager:
         self.result['nodes'] = {}
         self.result['totalclients']=0
         for id in self.json159:
+            mac = id
             node = self.json159[id]
 
     # Nodes/Gateway
@@ -60,10 +61,54 @@ class JsonManager:
                 id = node['node_id']
                 self.result['nodes'][id] = {}
                 if 'clients' in node:
-                    self.result['nodes'][id]["clients"] = node['clients']['total']
+                    self.result['nodes'][id]["count"] = node['clients']['total']
+                if 'advanced-stats' in self.json158[mac]:
+                    if 'store-stats' in self.json158[mac]['advanced-stats'] and self.json158[mac]['advanced-stats']['store-stats'] == True:
+                        self.result['nodes'][id]['advanced'] = self.processAdvancedStats(node)
                     self.result['totalclients'] += node['clients']['total']
             except:
                 sys.stderr.write("Error %s" % sys.exc_info()[0])
+
+    def processAdvancedStats(self, node):
+        advancedStats = {}
+
+        # add traffic stats
+        if 'traffic' in node:
+            advancedStats['traffic'] = {}
+            if 'rx' in node['traffic'] and 'tx' in node['traffic']:
+                advancedStats['traffic']['all'] = self.ifStats(node['traffic']['rx'], node['traffic']['tx'])
+            if 'mgmt_rx' in node['traffic'] and 'mgmt_tx' in node['traffic']:
+                advancedStats['traffic']['managed'] = self.ifStats(node['traffic']['mgmt_rx'], node['traffic']['mgmt_tx'])
+            if 'forward' in node['traffic']:
+                advancedStats['traffic']['forward'] = self.ifStats(node['traffic']['forward'])
+        return advancedStats
+
+
+    def ifStats(self,rx,tx = None):
+        mapping = {
+            'bytes' : 'if_octets',
+            'dropped' : 'if_dropped',
+            'packets' : 'if_packets'
+        }
+        ifaceStats = {}
+        for k, v in mapping.iteritems():
+            if rx and k in rx or tx and k in tx:
+                ifaceStats[v] = {}
+            if tx:
+                try:
+                    ifaceStats[v]['rx'] = rx[k]
+                except:
+                    pass
+                try:
+                    ifaceStats[v]['tx'] = tx[k]
+                except:
+                    pass
+            else:
+                try:
+                    ifaceStats[v] = rx[k]
+                except:
+                    pass
+        return ifaceStats
 
 
     def processJson158(self):
@@ -111,3 +156,4 @@ class JsonManager:
             cleanstr = cleanstr.replace(char,"_")
         cleanstr = cleanstr.replace(":","")
         return cleanstr
+
