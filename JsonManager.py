@@ -26,6 +26,7 @@ class JsonManager:
         self.result = {}
         pass
 
+
     def loadJson(self):
         data=""
         for l in open("alfred_158.json"):
@@ -40,10 +41,45 @@ class JsonManager:
             data += l
         self.json160 =json.loads(data)
 
+
     def loadJsonFromAlfred(self, socket):
         self.json158 = json.loads(check_output(["alfred-json", "-z","-r","158","-s",socket]).decode("utf-8"))
         self.json159 = json.loads(check_output(["alfred-json", "-z","-r","159","-s",socket]).decode("utf-8"))
         self.json160 = json.loads(check_output(["alfred-json", "-z","-r","160","-s",socket]).decode("utf-8"))
+
+
+    def processJson158(self):
+        self.result["autoupdate"] = 0
+        for id in self.json158:
+            node = self.json158[id]
+
+    # Nodes/Firmware
+            if 'software' in node:
+                firmware = node['software']['firmware']['release']
+                self.__incCounter__('firmwarecount',firmware)
+                if 'autoupdater' in node['software']:
+                    branch = node['software']['autoupdater']['branch']
+                    self.__incCounter__('branchcount',branch)
+
+                    if node['software']['autoupdater']['enabled']:
+                        self.__incCounter__('autoupdate')
+
+            if 'hardware' in node:
+                hardware = node['hardware']['model']
+                self.__incCounter__('hardwarecount',hardware)
+
+            if 'location' in node:
+                self.__incCounter__('locationcount')
+            try:
+                if node['advanced-stats']['store-stats'] == True:
+                    self.advStats[id] = True
+            except:
+                self.advStats[id] = False
+
+
+
+        self.result['nodecount'] = len(self.json158)
+
 
     def processJson159(self):
         self.result['nodes'] = {}
@@ -79,6 +115,10 @@ class JsonManager:
                     self.result['nodes'][nodeID].update(self.processAdvancedStats(node))
             except:
                 sys.stderr.write("Error %s" % sys.exc_info()[0])
+
+
+    def processJson160(self):
+        pass
 
 
     def processAdvancedStats(self, node):
@@ -143,6 +183,7 @@ class JsonManager:
                             dataStats[gname][pname] = 0
         return dataStats
 
+
     def __ifStats__(self,rx,tx = None):
         mapping = {
             'bytes' : 'if_octets',
@@ -162,6 +203,7 @@ class JsonManager:
                     ifaceStats[v] = rx[k]
         return ifaceStats
 
+
     def __cherryPickEntries__(self, data, entries):
         dataStats = {}
         for entry in entries:
@@ -173,37 +215,6 @@ class JsonManager:
                     dataStats[entry] = data[entry]
         return dataStats
 
-    def processJson158(self):
-        self.result["autoupdate"] = 0
-        for id in self.json158:
-            node = self.json158[id]
-
-    # Nodes/Firmware
-            if 'software' in node:
-                firmware = node['software']['firmware']['release']
-                self.__incCounter__('firmwarecount',firmware)
-                if 'autoupdater' in node['software']:
-		    branch = node['software']['autoupdater']['branch']
-		    self.__incCounter__('branchcount',branch)
-
-		    if node['software']['autoupdater']['enabled']:
-			self.__incCounter__('autoupdate')
-
-            if 'hardware' in node:
-                hardware = node['hardware']['model']
-                self.__incCounter__('hardwarecount',hardware)
-
-            if 'location' in node:
-                self.__incCounter__('locationcount')
-            try:
-                if node['advanced-stats']['store-stats'] == True:
-                    self.advStats[id] = True
-            except:
-                self.advStats[id] = False
-
-
-
-        self.result['nodecount'] = len(self.json158)
 
     def __incCounter__(self, key, value=None):
 
@@ -219,6 +230,7 @@ class JsonManager:
                 self.result[key][value]+=1
             else:
                 self.result[key][value]=1
+
 
     def ___cleanstr___(self, cleanstr):
         specialChars = [" ","+",".","\\","/","-"]

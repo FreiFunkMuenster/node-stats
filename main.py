@@ -36,6 +36,7 @@ else:
     jsonManager.loadJsonFromAlfred(args.socket)
 jsonManager.processJson158()
 jsonManager.processJson159()
+jsonManager.processJson160()
 
 graphiteManager = GraphiteManager(args.server, args.port, args.domain)
 graphiteManager.prepareMessage(jsonManager.result)
