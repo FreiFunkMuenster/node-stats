@@ -47,8 +47,8 @@ class JsonManager:
 
     # Nodes/Gateway
             try:
-                if 'mesh_vpn' in node and 'backbone' in node['mesh_vpn']['groups']:
-                    peers = node['mesh_vpn']['groups']['backbone']['peers']
+                if 'mesh_vpn' in node and 'domaene_01' in node['mesh_vpn']['groups']:
+                    peers = node['mesh_vpn']['groups']['domaene_01']['peers']
                     for x in peers:
                         if peers[x]:
                             self.__incCounter__('gateway',x)
@@ -57,18 +57,22 @@ class JsonManager:
                 sys.stderr.write("Error %s" % sys.exc_info()[0])
 
     # Client/Node
+            id = node['node_id']
+            self.result['nodes'][id] = {}
             try:
-                id = node['node_id']
-                self.result['nodes'][id] = {}
                 if 'clients' in node:
                     self.result['nodes'][id]["count"] = node['clients']['total']
-                if 'advanced-stats' in self.json158[mac]:
-                    if 'store-stats' in self.json158[mac]['advanced-stats'] and self.json158[mac]['advanced-stats']['store-stats'] == True:
-                        self.result['nodes'][id].update(self.processAdvancedStats(node))
                     self.result['totalclients'] += node['clients']['total']
             except:
                 sys.stderr.write("Error %s" % sys.exc_info()[0])
 
+            try:
+                if 'advanced-stats' in self.json158[mac]:
+                    if 'store-stats' in self.json158[mac]['advanced-stats'] and self.json158[mac]['advanced-stats']['store-stats'] == True:
+                        self.result['nodes'][id].update(self.processAdvancedStats(node))
+            except:
+                sys.stderr.write("Error %s" % sys.exc_info()[0])
+                
     def processAdvancedStats(self, node):
         advancedStats = {}
 
@@ -110,9 +114,28 @@ class JsonManager:
                 advancedStats['traffic']['managed'] = self.__ifStats__(node['traffic']['mgmt_rx'], node['traffic']['mgmt_tx'])
             if 'forward' in node['traffic']:
                 advancedStats['traffic']['forward'] = self.__ifStats__(node['traffic']['forward'])
-
+        # add vpn stats
+        if 'mesh_vpn' in node:
+                advancedStats.update(self.__vpnStats__(node['mesh_vpn']))
+        if 'gateway' in node:
+            advancedStats['bat_gw_id'] = node['gateway'].split(':')[-1]
         return advancedStats
 
+
+    def __vpnStats__(self,data):
+        print data
+        dataStats = {}
+        if 'groups' in data:
+            for gname, group in data['groups'].iteritems():
+                dataStats[gname] = {}
+                if 'peers' in group:
+                    for pname, peer in group['peers'].iteritems():
+                        print pname
+                        if peer and 'established' in peer:
+                            dataStats[gname][pname] = peer['established']
+                        else:
+                            dataStats[gname][pname] = 0
+        return dataStats
 
     def __ifStats__(self,rx,tx = None):
         mapping = {
@@ -169,7 +192,8 @@ class JsonManager:
 
         self.result['nodecount'] = len(self.json158)
 
-    def __incCounter__ (self, key, value=None):
+    def __incCounter__(self, key, value=None):
+
         if value is None:
             if key not in self.result:
                 self.result[key] = 0
