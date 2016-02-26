@@ -64,7 +64,7 @@ class JsonManager:
                     self.result['nodes'][id]["count"] = node['clients']['total']
                 if 'advanced-stats' in self.json158[mac]:
                     if 'store-stats' in self.json158[mac]['advanced-stats'] and self.json158[mac]['advanced-stats']['store-stats'] == True:
-                        self.result['nodes'][id]['advanced'] = self.processAdvancedStats(node)
+                        self.result['nodes'][id].update(self.processAdvancedStats(node))
                     self.result['totalclients'] += node['clients']['total']
             except:
                 sys.stderr.write("Error %s" % sys.exc_info()[0])
@@ -72,19 +72,49 @@ class JsonManager:
     def processAdvancedStats(self, node):
         advancedStats = {}
 
+        #add data, where no procession or conversion is needed
+        entries = [
+            'uptime',
+            'idletime', 
+            'loadavg', 
+            [ 'memory',
+                [
+                    'cached',
+                    'buffers',
+                    'total',
+                    'free'
+                ]
+            ],
+            [ 'clients',
+                [
+                    'total',
+                    'wifi'
+                ]
+            ],
+            [ 'processes',
+                [
+                    'running',
+                    'total'
+                ]
+            ]
+        ]
+
+        advancedStats.update(self.__cherryPickEntries__(node,entries))
+
         # add traffic stats
         if 'traffic' in node:
             advancedStats['traffic'] = {}
             if 'rx' in node['traffic'] and 'tx' in node['traffic']:
-                advancedStats['traffic']['all'] = self.ifStats(node['traffic']['rx'], node['traffic']['tx'])
+                advancedStats['traffic']['all'] = self.__ifStats__(node['traffic']['rx'], node['traffic']['tx'])
             if 'mgmt_rx' in node['traffic'] and 'mgmt_tx' in node['traffic']:
-                advancedStats['traffic']['managed'] = self.ifStats(node['traffic']['mgmt_rx'], node['traffic']['mgmt_tx'])
+                advancedStats['traffic']['managed'] = self.__ifStats__(node['traffic']['mgmt_rx'], node['traffic']['mgmt_tx'])
             if 'forward' in node['traffic']:
-                advancedStats['traffic']['forward'] = self.ifStats(node['traffic']['forward'])
+                advancedStats['traffic']['forward'] = self.__ifStats__(node['traffic']['forward'])
+
         return advancedStats
 
 
-    def ifStats(self,rx,tx = None):
+    def __ifStats__(self,rx,tx = None):
         mapping = {
             'bytes' : 'if_octets',
             'dropped' : 'if_dropped',
@@ -94,22 +124,25 @@ class JsonManager:
         for k, v in mapping.iteritems():
             if rx and k in rx or tx and k in tx:
                 ifaceStats[v] = {}
-            if tx:
-                try:
-                    ifaceStats[v]['rx'] = rx[k]
-                except:
-                    pass
-                try:
-                    ifaceStats[v]['tx'] = tx[k]
-                except:
-                    pass
-            else:
-                try:
+                if rx and tx:
+                    if k in rx:
+                        ifaceStats[v]['rx'] = rx[k]
+                    if k in tx:
+                        ifaceStats[v]['tx'] = tx[k]
+                elif k in rx:
                     ifaceStats[v] = rx[k]
-                except:
-                    pass
         return ifaceStats
 
+    def __cherryPickEntries__(self, data, entries):
+        dataStats = {}
+        for entry in entries:
+            if isinstance(entry, list):
+                if entry[0] in data:
+                    dataStats[entry[0]] = (self.__cherryPickEntries__(data[entry[0]], entry[1]))
+            else:
+                if entry in data:
+                    dataStats[entry] = data[entry]
+        return dataStats
 
     def processJson158(self):
         self.result["autoupdate"] = 0
