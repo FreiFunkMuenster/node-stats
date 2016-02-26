@@ -19,7 +19,9 @@ import sys
 
 class JsonManager:
     def __init__(self):
+        self.advStats = {}
         self.json158 = []
+        self.json159 = []
         self.json159 = []
         self.result = {}
         pass
@@ -33,17 +35,23 @@ class JsonManager:
         for l in open("alfred_159.json"):
             data += l
         self.json159 =json.loads(data)
+        data=""
+        for l in open("alfred_160.json"):
+            data += l
+        self.json160 =json.loads(data)
 
     def loadJsonFromAlfred(self, socket):
         self.json158 = json.loads(check_output(["alfred-json", "-z","-r","158","-s",socket]).decode("utf-8"))
         self.json159 = json.loads(check_output(["alfred-json", "-z","-r","159","-s",socket]).decode("utf-8"))
+        self.json160 = json.loads(check_output(["alfred-json", "-z","-r","160","-s",socket]).decode("utf-8"))
 
     def processJson159(self):
         self.result['nodes'] = {}
         self.result['totalclients']=0
         for id in self.json159:
-            mac = id
+
             node = self.json159[id]
+            nodeID = node['node_id']
 
     # Nodes/Gateway
             try:
@@ -57,22 +65,22 @@ class JsonManager:
                 sys.stderr.write("Error %s" % sys.exc_info()[0])
 
     # Client/Node
-            id = node['node_id']
-            self.result['nodes'][id] = {}
+            
+            self.result['nodes'][nodeID] = {}
             try:
                 if 'clients' in node:
-                    self.result['nodes'][id]["count"] = node['clients']['total']
+                    self.result['nodes'][nodeID]["count"] = node['clients']['total']
                     self.result['totalclients'] += node['clients']['total']
             except:
                 sys.stderr.write("Error %s" % sys.exc_info()[0])
 
             try:
-                if 'advanced-stats' in self.json158[mac]:
-                    if 'store-stats' in self.json158[mac]['advanced-stats'] and self.json158[mac]['advanced-stats']['store-stats'] == True:
-                        self.result['nodes'][id].update(self.processAdvancedStats(node))
+                if id in self.advStats and self.advStats[id] == True:
+                    self.result['nodes'][nodeID].update(self.processAdvancedStats(node))
             except:
                 sys.stderr.write("Error %s" % sys.exc_info()[0])
-                
+
+
     def processAdvancedStats(self, node):
         advancedStats = {}
 
@@ -123,14 +131,12 @@ class JsonManager:
 
 
     def __vpnStats__(self,data):
-        print data
         dataStats = {}
         if 'groups' in data:
             for gname, group in data['groups'].iteritems():
                 dataStats[gname] = {}
                 if 'peers' in group:
                     for pname, peer in group['peers'].iteritems():
-                        print pname
                         if peer and 'established' in peer:
                             dataStats[gname][pname] = peer['established']
                         else:
@@ -189,6 +195,13 @@ class JsonManager:
 
             if 'location' in node:
                 self.__incCounter__('locationcount')
+            try:
+                if node['advanced-stats']['store-stats'] == True:
+                    self.advStats[id] = True
+            except:
+                self.advStats[id] = False
+
+
 
         self.result['nodecount'] = len(self.json158)
 
