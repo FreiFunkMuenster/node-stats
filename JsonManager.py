@@ -112,16 +112,42 @@ class JsonManager:
 
             try:
                 if id in self.advStats and self.advStats[id] == True:
-                    self.result['nodes'][nodeID].update(self.processAdvancedStats(node))
+                    self.result['nodes'][nodeID].update(self.processAdvancedStats159(node))
             except:
                 sys.stderr.write("Error %s" % sys.exc_info()[0])
 
 
     def processJson160(self):
-        pass
+        for id, node in self.json160.iteritems():
+            if id in self.advStats and self.advStats[id] == True:
+                node_id = node['node_id']
+                try:
+                    if 'wifi' in node:
+                        self.result['nodes'][node_id]['wifi'] = self.__wifiBatStats__(node['wifi'], ['noise', 'inactive', 'signal'])
+                    if 'batadv' in node:
+                        self.result['nodes'][node_id]['batadv'] = self.__wifiBatStats__(node['batadv'], ['tq', 'lastseen'])
+                except:
+                    sys.stderr.write("Error %s" % sys.exc_info()[0])
 
 
-    def processAdvancedStats(self, node):
+    def __wifiBatStats__(self, data, keys):
+        dataStats = {
+            'count' : 0
+        }
+        for if_id, if_val in data.iteritems():
+            if_id_print = if_id.replace(':', '_')
+            dataStats[if_id_print] = {
+                'count' : 0
+            }
+            if if_val and 'neighbours' in if_val:
+                for neigh_id, neigh_val in data[if_id]['neighbours'].iteritems():
+                    dataStats['count'] += 1
+                    dataStats[if_id_print]['count'] += 1
+                    dataStats[if_id_print][neigh_id.replace(':','_')] = self.__cherryPickEntries__(neigh_val, keys)
+        return dataStats
+
+
+    def processAdvancedStats159(self, node):
         advancedStats = {}
 
         #add data, where no procession or conversion is needed
