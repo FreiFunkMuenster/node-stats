@@ -22,7 +22,7 @@ class JsonManager:
         self.advStats = {}
         self.json158 = []
         self.json159 = []
-        self.json159 = []
+        self.json160 = []
         self.result = {}
         pass
 
@@ -89,16 +89,6 @@ class JsonManager:
             node = self.json159[id]
             nodeID = node['node_id']
 
-    # Nodes/Gateway
-            try:
-                if 'mesh_vpn' in node and 'domaene_01' in node['mesh_vpn']['groups']:
-                    peers = node['mesh_vpn']['groups']['domaene_01']['peers']
-                    for x in peers:
-                        if peers[x]:
-                            self.__incCounter__('gateway',x)
-            except:
-                pass
-                sys.stderr.write("Error %s" % sys.exc_info()[0])
 
     # Client/Node
             
