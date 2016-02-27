@@ -53,6 +53,16 @@ class JsonManager:
         for id in self.json158:
             node = self.json158[id]
 
+            # Check for advanced-stats feature
+            self.advStats[id] = {
+                'enabled' : False
+            }
+            try:
+                if node['advanced-stats']['store-stats'] == True:
+                    self.advStats[id]['enabled'] = True
+            except:
+                pass
+
     # Nodes/Firmware
             if 'software' in node:
                 firmware = node['software']['firmware']['release']
@@ -70,11 +80,17 @@ class JsonManager:
 
             if 'location' in node:
                 self.__incCounter__('locationcount')
-            try:
-                if node['advanced-stats']['store-stats'] == True:
-                    self.advStats[id] = True
-            except:
-                self.advStats[id] = False
+
+            # do advanced stats stuff in 158
+            if self.advStats[id]['enabled'] == True:
+
+                # generate mapping for interface names
+                if 'network' in node and 'mesh' in node['network'] and 'bat0' in node['network']['mesh'] and 'interfaces' in node['network']['mesh']['bat0']:
+                    self.advStats[id]['if_mapping'] = {}
+                    for k, v in node['network']['mesh']['bat0']['interfaces'].iteritems():
+                        for i, mac in enumerate(v):
+                            self.advStats[id]['if_mapping'][mac] = k + '_' + str(i)
+
 
 
 
@@ -101,7 +117,7 @@ class JsonManager:
                 sys.stderr.write("Error %s" % sys.exc_info()[0])
 
             try:
-                if id in self.advStats and self.advStats[id] == True:
+                if id in self.advStats and self.advStats[id]['enabled'] == True:
                     self.result['nodes'][nodeID].update(self.processAdvancedStats159(node))
             except:
                 sys.stderr.write("Error %s" % sys.exc_info()[0])
@@ -109,23 +125,29 @@ class JsonManager:
 
     def processJson160(self):
         for id, node in self.json160.iteritems():
-            if id in self.advStats and self.advStats[id] == True:
+            if id in self.advStats and self.advStats[id]['enabled'] == True:
                 node_id = node['node_id']
                 try:
                     if 'wifi' in node:
-                        self.result['nodes'][node_id]['wifi'] = self.__wifiAndBatmanStats__(node['wifi'], ['noise', 'inactive', 'signal'])
+                        self.result['nodes'][node_id]['wifi'] = self.__wifiAndBatmanStats__(id, node['wifi'], ['noise', 'inactive', 'signal'])
                     if 'batadv' in node:
-                        self.result['nodes'][node_id]['batadv'] = self.__wifiAndBatmanStats__(node['batadv'], ['tq', 'lastseen'])
+                        self.result['nodes'][node_id]['batadv'] = self.__wifiAndBatmanStats__(id, node['batadv'], ['tq', 'lastseen'])
                 except:
                     sys.stderr.write("Error %s" % sys.exc_info()[0])
 
 
-    def __wifiAndBatmanStats__(self, data, keys):
+    def __getIfName__(self, id, ifmac):
+        if ifmac in self.advStats[id]['if_mapping']:
+            return self.advStats[id]['if_mapping'][ifmac]
+        else:
+            return ifmac.replace(':', '_')
+
+    def __wifiAndBatmanStats__(self, id, data, keys):
         dataStats = {
             'count' : 0
         }
         for if_id, if_val in data.iteritems():
-            if_id_print = if_id.replace(':', '_')
+            if_id_print = self.__getIfName__(id, if_id)
             dataStats[if_id_print] = {
                 'count' : 0
             }
@@ -254,4 +276,3 @@ class JsonManager:
             cleanstr = cleanstr.replace(char,"_")
         cleanstr = cleanstr.replace(":","")
         return cleanstr
-
