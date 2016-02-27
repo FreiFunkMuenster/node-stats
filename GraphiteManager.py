@@ -25,8 +25,7 @@ class GraphiteManager:
 
     def prepareMessage(self, data):
         for i in data['nodes']:
-            if 'clients' in data['nodes'][i]:
-               self.__addSingleMessage__("node.%s.count" % i, data['nodes'][i]['clients'])
+            self.__addHieraDictMessage__(data['nodes'][i], "node.%s" % i)
 
         self.__addDictMessage__("nodes."+self.domain+".firmware.%s.count",data['firmwarecount'])
         self.__addDictMessage__("nodes."+self.domain+".branch.%s.count", data['branchcount'])
@@ -53,3 +52,11 @@ class GraphiteManager:
     def __addDictMessage__(self,key,dict):
         for i in dict:
             self.__addSingleMessage__(key % i, dict[i])
+
+    def __addHieraDictMessage__(self,data, path =''):
+        for k, v in data.iteritems():
+            if isinstance(v, dict):
+                self.__addHieraDictMessage__(v, path + '.' + k if len(path) > 0 else k)
+            else:
+                self.__addSingleMessage__(path + '.' + k, v)
+
