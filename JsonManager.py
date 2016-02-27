@@ -113,14 +113,14 @@ class JsonManager:
                 node_id = node['node_id']
                 try:
                     if 'wifi' in node:
-                        self.result['nodes'][node_id]['wifi'] = self.__wifiBatStats__(node['wifi'], ['noise', 'inactive', 'signal'])
+                        self.result['nodes'][node_id]['wifi'] = self.__wifiAndBatmanStats__(node['wifi'], ['noise', 'inactive', 'signal'])
                     if 'batadv' in node:
-                        self.result['nodes'][node_id]['batadv'] = self.__wifiBatStats__(node['batadv'], ['tq', 'lastseen'])
+                        self.result['nodes'][node_id]['batadv'] = self.__wifiAndBatmanStats__(node['batadv'], ['tq', 'lastseen'])
                 except:
                     sys.stderr.write("Error %s" % sys.exc_info()[0])
 
 
-    def __wifiBatStats__(self, data, keys):
+    def __wifiAndBatmanStats__(self, data, keys):
         dataStats = {
             'count' : 0
         }
@@ -180,7 +180,7 @@ class JsonManager:
                 advancedStats['traffic']['forward'] = self.__ifStats__(node['traffic']['forward'])
         # add vpn stats
         if 'mesh_vpn' in node:
-                advancedStats.update(self.__vpnStats__(node['mesh_vpn']))
+                advancedStats['mesh_vpn'] = self.__vpnStats__(node['mesh_vpn'])
         if 'gateway' in node:
             advancedStats['bat_gw_id'] = node['gateway'].split(':')[-1]
         return advancedStats
