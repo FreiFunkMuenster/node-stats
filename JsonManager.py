@@ -14,8 +14,7 @@
 #
 
 from subprocess import check_output
-import json
-import sys
+import json, sys, os.path
 
 class JsonManager:
     def __init__(self):
@@ -24,7 +23,8 @@ class JsonManager:
         self.json159 = []
         self.json160 = []
         self.result = {}
-        pass
+        self.__readAdvancedNodesFile__('advnodes')
+        print self.advStats
 
 
     def loadJson(self):
@@ -52,16 +52,14 @@ class JsonManager:
         self.result["autoupdate"] = 0
         for id in self.json158:
             node = self.json158[id]
+            nodeID = id.replace(':','')
 
             # Check for advanced-stats feature
-            self.advStats[id] = {
-                'enabled' : False
-            }
-            try:
-                if node['advanced-stats']['store-stats'] == True:
-                    self.advStats[id]['enabled'] = True
-            except:
-                pass
+            if nodeID not in self.advStats:
+                if 'advanced-stats' in node and 'store-stats' in node['advanced-stats'] and node['advanced-stats']['store-stats'] == True:
+                    self.__addNode__(nodeID, True)
+                else:
+                    self.__addNode__(nodeID, False)
 
     # Nodes/Firmware
             if 'software' in node:
@@ -82,14 +80,14 @@ class JsonManager:
                 self.__incCounter__('locationcount')
 
             # do advanced stats stuff in 158
-            if self.advStats[id]['enabled'] == True:
+            if self.advStats[nodeID]['enabled'] == True:
 
                 # generate mapping for interface names
                 if 'network' in node and 'mesh' in node['network'] and 'bat0' in node['network']['mesh'] and 'interfaces' in node['network']['mesh']['bat0']:
-                    self.advStats[id]['if_mapping'] = {}
+                    self.advStats[nodeID]['if_mapping'] = {}
                     for k, v in node['network']['mesh']['bat0']['interfaces'].iteritems():
                         for i, mac in enumerate(v):
-                            self.advStats[id]['if_mapping'][mac] = k + '_' + str(i)
+                            self.advStats[nodeID]['if_mapping'][mac] = k + '_' + str(i)
 
 
 
@@ -117,7 +115,7 @@ class JsonManager:
                 sys.stderr.write("Error %s" % sys.exc_info()[0])
 
             try:
-                if id in self.advStats and self.advStats[id]['enabled'] == True:
+                if nodeID in self.advStats and self.advStats[nodeID]['enabled'] == True:
                     self.result['nodes'][nodeID].update(self.processAdvancedStats159(node))
             except:
                 sys.stderr.write("Error %s" % sys.exc_info()[0])
@@ -125,7 +123,8 @@ class JsonManager:
 
     def processJson160(self):
         for id, node in self.json160.iteritems():
-            if id in self.advStats and self.advStats[id]['enabled'] == True:
+            nodeID = id.replace(':','')
+            if nodeID in self.advStats and self.advStats[nodeID]['enabled'] == True:
                 node_id = node['node_id']
                 try:
                     if 'wifi' in node:
@@ -134,29 +133,6 @@ class JsonManager:
                         self.result['nodes'][node_id]['batadv'] = self.__wifiAndBatmanStats__(id, node['batadv'], ['tq', 'lastseen'])
                 except:
                     sys.stderr.write("Error %s" % sys.exc_info()[0])
-
-
-    def __getIfName__(self, id, ifmac):
-        if ifmac in self.advStats[id]['if_mapping']:
-            return self.advStats[id]['if_mapping'][ifmac]
-        else:
-            return ifmac.replace(':', '_')
-
-    def __wifiAndBatmanStats__(self, id, data, keys):
-        dataStats = {
-            'count' : 0
-        }
-        for if_id, if_val in data.iteritems():
-            if_id_print = self.__getIfName__(id, if_id)
-            dataStats[if_id_print] = {
-                'count' : 0
-            }
-            if if_val and 'neighbours' in if_val:
-                for neigh_id, neigh_val in data[if_id]['neighbours'].iteritems():
-                    dataStats['count'] += 1
-                    dataStats[if_id_print]['count'] += 1
-                    dataStats[if_id_print][neigh_id.replace(':','_')] = self.__cherryPickEntries__(neigh_val, keys)
-        return dataStats
 
 
     def processAdvancedStats159(self, node):
@@ -253,6 +229,42 @@ class JsonManager:
                     dataStats[entry] = data[entry]
         return dataStats
 
+
+    def __getIfName__(self, id, ifmac):
+        if ifmac in self.advStats[id]['if_mapping']:
+            return self.advStats[id]['if_mapping'][ifmac]
+        else:
+            return ifmac.replace(':', '_')
+
+
+    def __wifiAndBatmanStats__(self, id, data, keys):
+        dataStats = {
+            'count' : 0
+        }
+        for if_id, if_val in data.iteritems():
+            if_id_print = self.__getIfName__(id, if_id)
+            dataStats[if_id_print] = {
+                'count' : 0
+            }
+            if if_val and 'neighbours' in if_val:
+                for neigh_id, neigh_val in data[if_id]['neighbours'].iteritems():
+                    dataStats['count'] += 1
+                    dataStats[if_id_print]['count'] += 1
+                    dataStats[if_id_print][neigh_id.replace(':','_')] = self.__cherryPickEntries__(neigh_val, keys)
+        return dataStats
+
+
+    def __readAdvancedNodesFile__(self,filename):
+        if os.path.isfile(filename):
+            with open(filename) as f:
+                for line in f:
+                    self.__addNode__(line.strip(),True)
+
+    def __addNode__(self,nodeID,advStats = False):
+        if nodeID not in self.advStats:
+            self.advStats[nodeID] = {
+                'enabled' : advStats
+            }
 
     def __incCounter__(self, key, value=None):
 
