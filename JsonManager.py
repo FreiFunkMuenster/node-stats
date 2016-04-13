@@ -24,7 +24,6 @@ class JsonManager:
         self.json160 = []
         self.result = {}
         self.__readAdvancedNodesFile__('advnodes')
-        print self.advStats
 
 
     def loadJson(self):
