@@ -132,7 +132,8 @@ class JsonManager:
                     if 'batadv' in node:
                         self.result['nodes'][node_id]['batadv'] = self.__wifiAndBatmanStats__(id, node['batadv'], ['tq', 'lastseen'])
                 except:
-                    sys.stderr.write("Error %s" % sys.exc_info()[0])
+                    pass
+#                    sys.stderr.write("Error %s" % sys.exc_info()[0])
 
 
     def processAdvancedStats159(self, node):
