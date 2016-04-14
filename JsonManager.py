@@ -23,7 +23,7 @@ class JsonManager:
         self.json159 = []
         self.json160 = []
         self.result = {}
-        self.__readAdvancedNodesFile__('advnodes')
+        self.__readAdvancedNodesFile__('/usr/src/node-stats/advnodes')
 
 
     def loadJson(self):
@@ -124,12 +124,11 @@ class JsonManager:
         for id, node in self.json160.iteritems():
             nodeID = id.replace(':','')
             if nodeID in self.advStats and self.advStats[nodeID]['enabled'] == True:
-                node_id = node['node_id']
                 try:
                     if 'wifi' in node:
-                        self.result['nodes'][node_id]['wifi'] = self.__wifiAndBatmanStats__(id, node['wifi'], ['noise', 'inactive', 'signal'])
+                        self.result['nodes'][nodeID]['wifi'] = self.__wifiAndBatmanStats__(nodeID, node['wifi'], ['noise', 'inactive', 'signal'])
                     if 'batadv' in node:
-                        self.result['nodes'][node_id]['batadv'] = self.__wifiAndBatmanStats__(id, node['batadv'], ['tq', 'lastseen'])
+                        self.result['nodes'][nodeID]['batadv'] = self.__wifiAndBatmanStats__(nodeID, node['batadv'], ['tq', 'lastseen'])
                 except:
                     pass
 #                    sys.stderr.write("Error %s" % sys.exc_info()[0])
