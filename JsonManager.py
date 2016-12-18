@@ -161,7 +161,8 @@ class JsonManager:
                     'running',
                     'total'
                 ]
-            ]
+            ],
+            'rootfs_usage'
         ]
 
         advancedStats.update(self.__cherryPickEntries__(node,entries))
@@ -170,7 +171,7 @@ class JsonManager:
         if 'traffic' in node:
             advancedStats['traffic'] = {}
             if 'rx' in node['traffic'] and 'tx' in node['traffic']:
-                advancedStats['traffic']['all'] = self.__ifStats__(node['traffic']['rx'], node['traffic']['tx'])
+                advancedStats['traffic']['node'] = self.__ifStats__(node['traffic']['rx'], node['traffic']['tx'])
             if 'mgmt_rx' in node['traffic'] and 'mgmt_tx' in node['traffic']:
                 advancedStats['traffic']['managed'] = self.__ifStats__(node['traffic']['mgmt_rx'], node['traffic']['mgmt_tx'])
             if 'forward' in node['traffic']:
@@ -180,6 +181,9 @@ class JsonManager:
                 advancedStats['mesh_vpn'] = self.__vpnStats__(node['mesh_vpn'])
         if 'gateway' in node:
             advancedStats['bat_gw_id'] = node['gateway'].split(':')[-1]
+            advancedStats['bat_gw_mac'] = node['gateway']
+        if 'gateway_nexthop' in node:
+            advancedStats['bat_gw_next_hop_mac'] = node['gateway_nexthop']
         return advancedStats
 
 
@@ -240,6 +244,8 @@ class JsonManager:
         dataStats = {
             'count' : 0
         }
+        #print("mark", self.result['nodes'][id])
+        gwid = self.result['nodes'][id]['bat_gw_mac'] if 'bat_gw_mac' in self.result['nodes'][id] else None
         for if_id, if_val in data.iteritems():
             if_id_print = self.__getIfName__(id, if_id)
             dataStats[if_id_print] = {
@@ -248,8 +254,15 @@ class JsonManager:
             if if_val and 'neighbours' in if_val:
                 for neigh_id, neigh_val in data[if_id]['neighbours'].iteritems():
                     dataStats['count'] += 1
-                    dataStats[if_id_print]['count'] += 1
-                    dataStats[if_id_print][neigh_id.replace(':','_')] = self.__cherryPickEntries__(neigh_val, keys)
+                    print('mark',neigh_id,gwid)
+                    if gwid == neigh_id:
+                        if 'gateways' not in dataStats:
+                            dataStats['gateways'] = {'count' : 0}
+                        dataStats['gateways']['count'] += 1
+                        dataStats['gateways'][neigh_id.replace(':','_')] = self.__cherryPickEntries__(neigh_val, keys)
+                    else:
+                        dataStats[if_id_print]['count'] += 1
+                        dataStats[if_id_print][neigh_id.replace(':','_')] = self.__cherryPickEntries__(neigh_val, keys)
         return dataStats
 
 

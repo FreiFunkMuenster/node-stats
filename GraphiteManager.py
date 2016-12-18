@@ -35,7 +35,7 @@ class GraphiteManager:
         self.__addSingleMessage__("nodes."+self.domain+".location.count",data['locationcount'])
         self.__addSingleMessage__("nodes."+self.domain+".total.count",data['nodecount'])
         self.__addSingleMessage__("nodes."+self.domain+".totalclient.count",data['totalclients'])
-	self.__addSingleMessage__("nodes."+self.domain+"clients_per_node",data['totalclients']/data['nodecount'])
+        self.__addSingleMessage__("nodes."+self.domain+"clients_per_node",data['totalclients']/data['nodecount'])
 
     def send(self):
         sock = socket.socket()
