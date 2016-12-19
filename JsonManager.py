@@ -180,10 +180,9 @@ class JsonManager:
         if 'mesh_vpn' in node:
                 advancedStats['mesh_vpn'] = self.__vpnStats__(node['mesh_vpn'])
         if 'gateway' in node:
-            advancedStats['bat_gw_id'] = node['gateway'].split(':')[-1]
-            advancedStats['bat_gw_mac'] = node['gateway']
+            advancedStats['bat_gw_id'] = node['gateway'].replace(':','')
         if 'gateway_nexthop' in node:
-            advancedStats['bat_gw_next_hop_mac'] = node['gateway_nexthop']
+            advancedStats['bat_gw_next_hop_id'] = node['gateway_nexthop'].replace(':','')
         return advancedStats
 
 
@@ -245,22 +244,20 @@ class JsonManager:
             'count' : 0
         }
         #print("mark", self.result['nodes'][id])
-        gwid = self.result['nodes'][id]['bat_gw_mac'] if 'bat_gw_mac' in self.result['nodes'][id] else None
+        gwid = self.result['nodes'][id]['bat_gw_id'] if 'bat_gw_id' in self.result['nodes'][id] else None
         for if_id, if_val in data.iteritems():
             if_id_print = self.__getIfName__(id, if_id)
-            dataStats[if_id_print] = {
-                'count' : 0
-            }
             if if_val and 'neighbours' in if_val:
                 for neigh_id, neigh_val in data[if_id]['neighbours'].iteritems():
                     dataStats['count'] += 1
-                    print('mark',neigh_id,gwid)
-                    if gwid == neigh_id:
+                    if gwid == neigh_id.replace(':',''):
                         if 'gateways' not in dataStats:
                             dataStats['gateways'] = {'count' : 0}
                         dataStats['gateways']['count'] += 1
                         dataStats['gateways'][neigh_id.replace(':','_')] = self.__cherryPickEntries__(neigh_val, keys)
                     else:
+                        if if_id_print not in dataStats:
+                            dataStats[if_id_print] = {'count' : 0}
                         dataStats[if_id_print]['count'] += 1
                         dataStats[if_id_print][neigh_id.replace(':','_')] = self.__cherryPickEntries__(neigh_val, keys)
         return dataStats
