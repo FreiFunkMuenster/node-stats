@@ -14,8 +14,7 @@
 #
 
 from subprocess import check_output
-import json, sys, os.path
-
+import json, sys, os.path, socket, zlib, ctypes
 class JsonManager:
     def __init__(self):
         self.advStats = {}
@@ -23,28 +22,44 @@ class JsonManager:
         self.json159 = []
         self.json160 = []
         self.result = {}
-        self.__readAdvancedNodesFile__('/usr/src/node-stats/advnodes')
+        self.__readAdvancedNodesFile__('./advnodes')
+
+    def getRespondd(self, interface, command):
+        _clib = ctypes.cdll.LoadLibrary("libc.so.6")
+        try:
+            if_id = _clib.if_nametoindex(interface)
+        except OSError:
+            return {}
+
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+
+        message = 'GET ' + command
+        sock.sendto(message, ('ff02::2', 1001, 0, if_id))
+
+        sock.settimeout(0.5) # if no replies in 2 seconds, continue
+
+        # receive
+        responses = {}
+        while True:
+            try:
+                buffer, address = sock.recvfrom(2048)
+            except socket.timeout:
+                break
+
+            try:
+                data = zlib.decompress(buffer, -15)
+                nodeinfo = json.loads(data.decode('utf-8'))[command]
+                responses[nodeinfo['node_id']] = nodeinfo
+            except (zlib.error, UnicodeDecodeError, ValueError):
+                continue
 
 
-    def loadJson(self):
-        data=""
-        for l in open("alfred_158.json"):
-            data += l
-        self.json158 = json.loads(data)
-        data=""
-        for l in open("alfred_159.json"):
-            data += l
-        self.json159 =json.loads(data)
-        data=""
-        for l in open("alfred_160.json"):
-            data += l
-        self.json160 =json.loads(data)
+        return responses
 
-
-    def loadJsonFromAlfred(self, socket):
-        self.json158 = json.loads(check_output(["alfred-json", "-z","-r","158","-s",socket]).decode("utf-8"))
-        self.json159 = json.loads(check_output(["alfred-json", "-z","-r","159","-s",socket]).decode("utf-8"))
-        self.json160 = json.loads(check_output(["alfred-json", "-z","-r","160","-s",socket]).decode("utf-8"))
+    def loadJsonFromRespondd(self, batif):
+        self.json158 = self.getRespondd(batif, 'nodeinfo')
+        self.json159 = self.getRespondd(batif, 'statistics')
+        self.json160 = self.getRespondd(batif, 'neighbours')
 
 
     def processJson158(self):
@@ -62,11 +77,13 @@ class JsonManager:
 
     # Nodes/Firmware
             if 'software' in node:
-                firmware = node['software']['firmware']['release']
-                self.__incCounter__('firmwarecount',firmware)
+                if 'firmware' in node['software']:
+                    firmware = node['software']['firmware']['release']
+                    self.__incCounter__('firmwarecount',firmware)
                 if 'autoupdater' in node['software']:
-                    branch = node['software']['autoupdater']['branch']
-                    self.__incCounter__('branchcount',branch)
+                    if 'branch' in node['software']['autoupdater']:
+                        branch = node['software']['autoupdater']['branch']
+                        self.__incCounter__('branchcount',branch)
 
                     if node['software']['autoupdater']['enabled']:
                         self.__incCounter__('autoupdate')

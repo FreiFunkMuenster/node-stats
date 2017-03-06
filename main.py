@@ -23,7 +23,7 @@ from GraphiteManager import GraphiteManager
 parser = argparse.ArgumentParser(description='This Script gets information about Freifunk Muenster')
 parser.add_argument('--server', required=True, help='Server')
 parser.add_argument('--port', required=True, help='Port', default=2003)
-parser.add_argument('--socket', help='Alfred-Socket', default='/run/alfred.sock')
+parser.add_argument('--batif', required=True, help='Batman interface', default='bat0')
 parser.add_argument('--domain', help='Freifunk Domäne', default='legacy')
 parser.add_argument('--local', help='Load local json files (alfred_158.json,alfred_159.json)', action='store_true')
 parser.add_argument('--print-only', help='Print only', action='store_true')
@@ -33,7 +33,7 @@ jsonManager = JsonManager()
 if args.local:
     jsonManager.loadJson()
 else:
-    jsonManager.loadJsonFromAlfred(args.socket)
+    jsonManager.loadJsonFromRespondd(args.batif)
 jsonManager.processJson158()
 jsonManager.processJson159()
 jsonManager.processJson160()
