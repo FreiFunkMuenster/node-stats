@@ -26,16 +26,18 @@ class GraphiteManager:
     def prepareMessage(self, data):
         for i in data['nodes']:
             self.__addHieraDictMessage__(data['nodes'][i], "node.%s" % i)
+        try:
+            self.__addDictMessage__("nodes."+self.domain+".firmware.%s.count",data['firmwarecount'])
+            self.__addDictMessage__("nodes."+self.domain+".branch.%s.count", data['branchcount'])
+            self.__addDictMessage__("nodes."+self.domain+".hardware.%s.count", data['hardwarecount'])
 
-        self.__addDictMessage__("nodes."+self.domain+".firmware.%s.count",data['firmwarecount'])
-        self.__addDictMessage__("nodes."+self.domain+".branch.%s.count", data['branchcount'])
-        self.__addDictMessage__("nodes."+self.domain+".hardware.%s.count", data['hardwarecount'])
-
-        self.__addSingleMessage__("nodes."+self.domain+".autoupdate.count",data['autoupdate'])
-        self.__addSingleMessage__("nodes."+self.domain+".location.count",data['locationcount'])
-        self.__addSingleMessage__("nodes."+self.domain+".total.count",data['nodecount'])
-        self.__addSingleMessage__("nodes."+self.domain+".totalclient.count",data['totalclients'])
-        self.__addSingleMessage__("nodes."+self.domain+"clients_per_node",data['totalclients']/float(data['nodecount']))
+            self.__addSingleMessage__("nodes."+self.domain+".autoupdate.count",data['autoupdate'])
+            self.__addSingleMessage__("nodes."+self.domain+".location.count",data['locationcount'])
+            self.__addSingleMessage__("nodes."+self.domain+".total.count",data['nodecount'])
+            self.__addSingleMessage__("nodes."+self.domain+".totalclient.count",data['totalclients'])
+            self.__addSingleMessage__("nodes."+self.domain+".clients_per_node",data['totalclients']/float(data['nodecount']))
+        except:
+            pass
 
     def send(self):
         sock = socket.socket()

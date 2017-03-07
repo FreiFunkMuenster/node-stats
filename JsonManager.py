@@ -22,7 +22,7 @@ class JsonManager:
         self.json159 = []
         self.json160 = []
         self.result = {}
-        self.__readAdvancedNodesFile__('./advnodes')
+        self.__readAdvancedNodesFile__(os.path.dirname(os.path.realpath(__file__)) + '/advnodes')
 
     def getRespondd(self, interface, command):
         _clib = ctypes.cdll.LoadLibrary("libc.so.6")
@@ -36,7 +36,7 @@ class JsonManager:
         message = 'GET ' + command
         sock.sendto(message, ('ff02::2', 1001, 0, if_id))
 
-        sock.settimeout(0.5) # if no replies in 2 seconds, continue
+        sock.settimeout(0.25) # wait 250 ms w/o any response before finish
 
         # receive
         responses = {}
