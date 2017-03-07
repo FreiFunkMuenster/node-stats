@@ -4,7 +4,7 @@ path=$(realpath $(dirname $0))
 for i in /proc/sys/net/ipv4/conf/bat*; do
     ((parallel++))
     num=${i#*bat}
-    python $path/main.py --server=148.251.101.196 --port=2003 --domain=domaene-${num} --batif=bat${num} --print-only &
+    python $path/main.py --server=148.251.101.196 --port=2003 --domain=domaene-${num} --batif=bat${num} &
 
     if ((parallel >= 8))
     then

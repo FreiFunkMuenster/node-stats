@@ -16,7 +16,7 @@
 #
 #
 
-import argparse, os
+import argparse
 from JsonManager import JsonManager
 from GraphiteManager import GraphiteManager
 
