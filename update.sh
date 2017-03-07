@@ -6,7 +6,7 @@ for i in /proc/sys/net/ipv4/conf/bat*; do
     num=${i#*bat}
     python $path/main.py --server=148.251.101.196 --port=2003 --domain=domaene-${num} --batif=bat${num} &
 
-    if ((parallel >= 8))
+    if ((parallel >= 16))
     then
         parallel=0
         wait
