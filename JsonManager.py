@@ -34,9 +34,9 @@ class JsonManager:
         sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
 
         message = 'GET ' + command
-        sock.sendto(message, ('ff02::2', 1001, 0, if_id))
+        sock.sendto(message, ('ff02::1', 1001, 0, if_id))
 
-        sock.settimeout(0.75) # wait 250 ms w/o any response before finish
+        sock.settimeout(0.75) # wait 750 ms w/o any response before finish
 
         # receive
         responses = {}
@@ -51,7 +51,7 @@ class JsonManager:
                 nodeinfo = json.loads(data.decode('utf-8'))[command]
                 responses[nodeinfo['node_id']] = nodeinfo
             except (zlib.error, UnicodeDecodeError, ValueError):
-                continue
+                pass
 
 
         return responses
@@ -60,7 +60,6 @@ class JsonManager:
         self.json158 = self.getRespondd(batif, 'nodeinfo')
         self.json159 = self.getRespondd(batif, 'statistics')
         self.json160 = self.getRespondd(batif, 'neighbours')
-
 
     def processJson158(self):
         self.result["autoupdate"] = 0
