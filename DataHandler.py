@@ -23,11 +23,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import sys, os, collections, json
+import sys, os, collections, json, datetime
 
 class DataHandler(object):
-    def __init__(self, jsonData):
+    def __init__(self, jsonData, config):
         self.data = jsonData
+        self.config = config
+        self._offlineTime = datetime.datetime.utcnow() - datetime.timedelta(seconds=self.config['offline_last_seen_s'])
         self.advNodeIDs =  self.__readAdvancedNodesFile__(os.path.dirname(os.path.realpath(__file__)) + '/advnodes')
         self.gatewayIDs = list()
         self.domains = collections.defaultdict(DataHandler.__domain_dict__)
@@ -45,36 +47,102 @@ class DataHandler(object):
             self.__operateNode__(nodeID, nodeData)
             # except:
             #     print('Error while operating on node ' + nodeID + ' goto next node.', file=sys.stderr)
-        print(json.dumps(self.domains, sort_keys=True, indent=4))
+        # print(json.dumps(self.domains, sort_keys=True, indent=4))
+        print(json.dumps(self.nodes, sort_keys=True, indent=4))
 
     def __operateNode__(self, nodeID, nodeData):
+
+        nodeLastSeen = datetime.datetime.strptime(nodeData['lastseen'], '%Y-%m-%dT%H:%M:%S.%fZ')
+        isOnline = nodeLastSeen > self._offlineTime
+
         nodeInfo = nodeData['nodeinfo']
+        nodeStats = nodeData['statistics']
         site = nodeInfo['system']['site_code']
-        self.domains[site]['nodes_count'] += 1
+        siteDict = self.domains[site]
+        siteDict['nodes_count'] += 1
+        
+        # continue if node is online only
+        if not isOnline:
+            return
+        
+        siteDict['nodes_online_count'] += 1
+
+        # store all client count type
+        if 'clients' in nodeStats:
+            for cltype, clcount in nodeStats['clients'].items():
+                siteDict['clients_online_count'][cltype] += clcount
+            self.nodes[nodeID]['clients_online_count'] = nodeStats['clients']
+
+        if 'gateway' in nodeStats:
+            siteDict['selected_gateway_count'][nodeStats['gateway'].replace(':','')] += 1 
+
         if 'software' in nodeInfo:
             sw = nodeInfo['software']
-            try:
-                self.domains[site]['firmwarecount'][sw['firmware']['release']] += 1
-            except:
-                pass
+            # credits to http://stackoverflow.com/a/18578210
+            if 'release' in sw.get('firmware', {}):
+                siteDict['firmware_count'][sw['firmware']['release']] += 1
+
+            if 'version' in sw.get('batman-adv',{}):
+                siteDict['batadv_version_count'][sw['batman-adv']['version']]+= 1
+
             if 'autoupdater' in sw:
                 if 'branch' in sw['autoupdater']:
-                    self.domains[site]['branchcount'][sw['autoupdater']['branch']] += 1
-
+                    siteDict['branch_count'][sw['autoupdater']['branch']] += 1
                 if sw['autoupdater']['enabled']:
-                    self.domains[site]['autoupdate'] += 1
-        try:
-            self.domains[site]['hardwarecount'][nodeInfo['hardware']['model']] += 1
-        except:
-            pass
+                    siteDict['autoupdater_enabled_count'] += 1
+
+        if 'model' in nodeInfo.get('hardware', {}):
+            siteDict['hardware_count'][nodeInfo['hardware']['model']] += 1
 
         if 'location' in nodeInfo:
-            self.domains[site]['locationcount'] += 1
+            siteDict['location_count'] += 1
+
 
         # do the advanced node info stuff
-        if self.__isAdvNode__(nodeID,nodeData):
-            pass
-        print(nodeID)
+        if not self.__isAdvNode__(nodeID,nodeData):
+            return
+
+        # statistics
+        for key in ('rootfs_usage', 'memory', 'uptime', 'idletime', 'loadavg', 'processes'):
+            if key in nodeStats:
+                self.nodes[nodeID][key] = nodeStats[key]
+
+        # traffic stats
+        if 'traffic' in nodeStats:
+            for tkey, tval in nodeStats['traffic'].items():
+                stats = {}
+                if 'bytes' in tval:
+                    stats['if_octets'] = tval['bytes']
+                if 'dropped' in tval:
+                    stats['if_dropped'] = tval['dropped']
+                if 'packets' in tval:
+                    stats['if_packets'] = tval['packets']
+
+                if tkey == 'forward':
+                    self.nodes[nodeID]['forward'] = stats
+                    continue
+
+                if tkey in ('rx', 'tx'):
+                    ttype = 'node'
+                    tdir = tkey
+                elif tkey.startswith('mgmt_'):
+                    ttype = 'managed'
+                    tdir = tkey.split('_')[1]
+                self.nodes[nodeID][ttype][tdir] = stats
+
+
+        # neighbours
+        for ttype, tvalue in nodeData['neighbours'].items():
+            if ttype == 'node_id':
+                continue
+            for iname, ivalue in tvalue.items():
+                inameid = iname.replace(':', '')
+                if not 'neighbours' in ivalue:
+                    continue
+                for nname, nvalue in ivalue['neighbours'].items():
+                    nnameid = nname.replace(':', '')
+                    self.nodes[nodeID][ttype][inameid][nnameid] = nvalue
+
 
     def __isAdvNode__(self,nodeID,data):
         try:
@@ -95,11 +163,14 @@ class DataHandler(object):
         return {
             'nodes_count' : 0,
             'nodes_online_count' : 0,
-            'locationcount' : 0,
-            'firmwarecount' : collections.defaultdict(int),
-            'branchcount' : collections.defaultdict(int),
-            'autoupdate' : 0,
-            'hardwarecount' : collections.defaultdict(int)
+            'clients_online_count' : collections.defaultdict(int),
+            'location_count' : 0,
+            'firmware_count' : collections.defaultdict(int),
+            'branch_count' : collections.defaultdict(int),
+            'autoupdater_enabled_count' : 0,
+            'hardware_count' : collections.defaultdict(int),
+            'selected_gateway_count' : collections.defaultdict(int),
+            'batadv_version_count' : collections.defaultdict(int)
         }
 
     @staticmethod

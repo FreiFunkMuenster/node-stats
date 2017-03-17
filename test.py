@@ -29,8 +29,10 @@ from DataHandler import DataHandler
 
 def main():
     args = __parseArguments__()
+    config = JsonHandler('./config.json')
+    print(config.data)
     rawJson = JsonHandler(args.hopglass_raw)
-    handler = DataHandler(rawJson.data)
+    handler = DataHandler(rawJson.data, config.data)
     handler.convert()
 
 

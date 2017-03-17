@@ -23,7 +23,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import json, urllib.request
+import json, sys, urllib.request
 class JsonHandler(object):
     def __init__(self, fileName):
         self.fileName = fileName
@@ -35,6 +35,7 @@ class JsonHandler(object):
         return self.__jsonData__
 
     def __getFile__(self, fileName):
+        data = None
         if fileName.startswith('https://') or fileName.startswith('http://'):
             if self.printStatus:
                 print('Download', fileName.rsplit('/', 1)[1] , 'from URL:', fileName)
