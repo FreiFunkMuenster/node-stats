@@ -48,7 +48,8 @@ class DataHandler(object):
             # except:
             #     print('Error while operating on node ' + nodeID + ' goto next node.', file=sys.stderr)
         # print(json.dumps(self.domains, sort_keys=True, indent=4))
-        print(json.dumps(self.nodes, sort_keys=True, indent=4))
+        # print(json.dumps(self.nodes, sort_keys=True, indent=4))
+        # print(self.gatewayIDs)
 
     def __operateNode__(self, nodeID, nodeData):
 
@@ -60,6 +61,7 @@ class DataHandler(object):
         site = nodeInfo['system']['site_code']
         siteDict = self.domains[site]
         siteDict['nodes_count'] += 1
+        nodeGateway = None
         
         # continue if node is online only
         if not isOnline:
@@ -74,7 +76,10 @@ class DataHandler(object):
             self.nodes[nodeID]['clients_online_count'] = nodeStats['clients']
 
         if 'gateway' in nodeStats:
-            siteDict['selected_gateway_count'][nodeStats['gateway'].replace(':','')] += 1 
+            nodeGateway = nodeStats['gateway'].replace(':','')
+            if nodeGateway not in self.gatewayIDs:
+                self.gatewayIDs.append(nodeGateway)
+            siteDict['selected_gateway_count'][nodeGateway] += 1 
 
         if 'software' in nodeInfo:
             sw = nodeInfo['software']
@@ -132,16 +137,27 @@ class DataHandler(object):
 
 
         # neighbours
+        macTypeMapping = {}
+        if 'mesh' in nodeInfo.get('network', {}):
+            for batID, batVal in nodeInfo['network']['mesh'].items():
+                if 'interfaces' in batVal:
+                    for ifType, ifVal in batVal['interfaces'].items():
+                        for mac in ifVal:
+                            macTypeMapping[mac] = ifType
         for ttype, tvalue in nodeData['neighbours'].items():
             if ttype == 'node_id':
                 continue
             for iname, ivalue in tvalue.items():
-                inameid = iname.replace(':', '')
                 if not 'neighbours' in ivalue:
                     continue
+                inameid = iname.replace(':', '')
+                if iname in macTypeMapping:
+                    ifPrefix = macTypeMapping[iname]
+                else:
+                    ifPrefix = 'unknown'
                 for nname, nvalue in ivalue['neighbours'].items():
                     nnameid = nname.replace(':', '')
-                    self.nodes[nodeID][ttype][inameid][nnameid] = nvalue
+                    self.nodes[nodeID][ttype][ifPrefix + '_' + inameid][nnameid] = nvalue
 
 
     def __isAdvNode__(self,nodeID,data):
