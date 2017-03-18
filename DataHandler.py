@@ -47,8 +47,8 @@ class DataHandler(object):
             self.__operateNode__(nodeID, nodeData)
             # except:
             #     print('Error while operating on node ' + nodeID + ' goto next node.', file=sys.stderr)
-        # print(json.dumps(self.domains, sort_keys=True, indent=4))
-        print(json.dumps(self.nodes, sort_keys=True, indent=4))
+        print(json.dumps(self.domains, sort_keys=True, indent=4))
+        # print(json.dumps(self.nodes, sort_keys=True, indent=4))
         # print(self.gatewayIDs)
 
     def __operateNode__(self, nodeID, nodeData):
@@ -60,18 +60,29 @@ class DataHandler(object):
         nodeStats = nodeData['statistics']
         site = nodeInfo['system']['site_code']
 
+        # avoid dots
         siteDict = self.domains[site]
         nodeDict = self.nodes[nodeID]
 
         nodeGateway = None
 
-        siteDict['nodes'] += 1
+        siteDict['nodes_all'] += 1
         
         # continue if node is online only
         if not isOnline:
             return
         
         siteDict['nodes_online'] += 1
+
+
+        if 'model' in nodeInfo.get('hardware', {}):
+            siteDict['hardware'][nodeInfo['hardware']['model']] += 1
+
+        if 'location' in nodeInfo:
+            siteDict['location'] += 1
+
+        if 'contact' in nodeInfo.get('owner', {}):
+            siteDict['contact'] += 1
 
         # store all client count type
         if 'clients' in nodeStats:
@@ -91,11 +102,15 @@ class DataHandler(object):
                 self.gatewayIDs.append(nodeGateway)
             siteDict['selected_gateway'][nodeGateway] += 1 
 
+        # infos about firmware and autoupdater
         if 'software' in nodeInfo:
             sw = nodeInfo['software']
             # credits to http://stackoverflow.com/a/18578210
             if 'release' in sw.get('firmware', {}):
-                siteDict['firmware'][sw['firmware']['release']] += 1
+                siteDict['firmware']['release'][sw['firmware']['release']] += 1
+
+            if 'base' in sw.get('firmware', {}):
+                siteDict['firmware']['base'][sw['firmware']['base']] += 1
 
             if 'version' in sw.get('batman-adv',{}):
                 siteDict['batadv_version'][sw['batman-adv']['version']]+= 1
@@ -105,15 +120,6 @@ class DataHandler(object):
                     siteDict['branch'][sw['autoupdater']['branch']] += 1
                 if sw['autoupdater']['enabled']:
                     siteDict['autoupdater_enabled'] += 1
-
-        if 'model' in nodeInfo.get('hardware', {}):
-            siteDict['hardware'][nodeInfo['hardware']['model']] += 1
-
-        if 'location' in nodeInfo:
-            siteDict['location'] += 1
-
-        if 'contact' in nodeInfo.get('owner', {}):
-            siteDict['contact'] += 1
 
         # do the advanced node info stuff
         if not self.__isAdvNode__(nodeID,nodeData):
@@ -162,7 +168,7 @@ class DataHandler(object):
                     for ifType, ifVal in batVal['interfaces'].items():
                         for mac in ifVal:
                             macTypeMapping[mac] = ifType
-        print(macTypeMapping)
+        # print(macTypeMapping)
 
         # get informations about interfaces and neighbours for both batadv and wifi
         for ttype, tvalue in nodeData['neighbours'].items():
@@ -201,13 +207,16 @@ class DataHandler(object):
     @staticmethod
     def __domain_dict__():
         return {
-            'nodes' : 0,
+            'nodes_all' : 0,
             'nodes_online' : 0,
             'nodes_with_uplink' : 0,
             'nodes_mesh_only' : 0,
             'clients_online' : collections.defaultdict(int),
             'location' : 0,
-            'firmware' : collections.defaultdict(int),
+            'firmware' : {
+                'release' : collections.defaultdict(int),
+                'base' : collections.defaultdict(int)
+            },
             'branch' : collections.defaultdict(int),
             'autoupdater_enabled' : 0,
             'hardware' : collections.defaultdict(int),
