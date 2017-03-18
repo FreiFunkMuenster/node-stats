@@ -48,7 +48,7 @@ class DataHandler(object):
             # except:
             #     print('Error while operating on node ' + nodeID + ' goto next node.', file=sys.stderr)
         # print(json.dumps(self.domains, sort_keys=True, indent=4))
-        # print(json.dumps(self.nodes, sort_keys=True, indent=4))
+        print(json.dumps(self.nodes, sort_keys=True, indent=4))
         # print(self.gatewayIDs)
 
     def __operateNode__(self, nodeID, nodeData):
@@ -59,49 +59,61 @@ class DataHandler(object):
         nodeInfo = nodeData['nodeinfo']
         nodeStats = nodeData['statistics']
         site = nodeInfo['system']['site_code']
+
         siteDict = self.domains[site]
-        siteDict['nodes_count'] += 1
+        nodeDict = self.nodes[nodeID]
+
         nodeGateway = None
+
+        siteDict['nodes'] += 1
         
         # continue if node is online only
         if not isOnline:
             return
         
-        siteDict['nodes_online_count'] += 1
+        siteDict['nodes_online'] += 1
 
         # store all client count type
         if 'clients' in nodeStats:
             for cltype, clcount in nodeStats['clients'].items():
-                siteDict['clients_online_count'][cltype] += clcount
-            self.nodes[nodeID]['clients_online_count'] = nodeStats['clients']
+                siteDict['clients_online'][cltype] += clcount
+            nodeDict['clients_online'] = nodeStats['clients']
 
+        # infos about gateway and next hop
         if 'gateway' in nodeStats:
             nodeGateway = nodeStats['gateway'].replace(':','')
+            if 'gateway_nexthop' in nodeStats:
+                if nodeStats['gateway'] == nodeStats['gateway_nexthop']:
+                    siteDict['nodes_with_uplink'] += 1
+                else:
+                    siteDict['nodes_mesh_only'] += 1
             if nodeGateway not in self.gatewayIDs:
                 self.gatewayIDs.append(nodeGateway)
-            siteDict['selected_gateway_count'][nodeGateway] += 1 
+            siteDict['selected_gateway'][nodeGateway] += 1 
 
         if 'software' in nodeInfo:
             sw = nodeInfo['software']
             # credits to http://stackoverflow.com/a/18578210
             if 'release' in sw.get('firmware', {}):
-                siteDict['firmware_count'][sw['firmware']['release']] += 1
+                siteDict['firmware'][sw['firmware']['release']] += 1
 
             if 'version' in sw.get('batman-adv',{}):
-                siteDict['batadv_version_count'][sw['batman-adv']['version']]+= 1
+                siteDict['batadv_version'][sw['batman-adv']['version']]+= 1
 
             if 'autoupdater' in sw:
                 if 'branch' in sw['autoupdater']:
-                    siteDict['branch_count'][sw['autoupdater']['branch']] += 1
+                    siteDict['branch'][sw['autoupdater']['branch']] += 1
                 if sw['autoupdater']['enabled']:
-                    siteDict['autoupdater_enabled_count'] += 1
+                    siteDict['autoupdater_enabled'] += 1
 
         if 'model' in nodeInfo.get('hardware', {}):
-            siteDict['hardware_count'][nodeInfo['hardware']['model']] += 1
+            siteDict['hardware'][nodeInfo['hardware']['model']] += 1
 
         if 'location' in nodeInfo:
-            siteDict['location_count'] += 1
+            siteDict['location'] += 1
 
+        if 'contact' in nodeInfo.get('owner', {}):
+            siteDict['contact'] += 1
 
         # do the advanced node info stuff
         if not self.__isAdvNode__(nodeID,nodeData):
@@ -110,12 +122,14 @@ class DataHandler(object):
         # statistics
         for key in ('rootfs_usage', 'memory', 'uptime', 'idletime', 'loadavg', 'processes'):
             if key in nodeStats:
-                self.nodes[nodeID][key] = nodeStats[key]
+                nodeDict[key] = nodeStats[key]
 
         # traffic stats
         if 'traffic' in nodeStats:
             for tkey, tval in nodeStats['traffic'].items():
                 stats = {}
+
+                # map traffic stats to graphite format
                 if 'bytes' in tval:
                     stats['if_octets'] = tval['bytes']
                 if 'dropped' in tval:
@@ -123,20 +137,24 @@ class DataHandler(object):
                 if 'packets' in tval:
                     stats['if_packets'] = tval['packets']
 
+                # forward traffic has no direction
                 if tkey == 'forward':
-                    self.nodes[nodeID]['forward'] = stats
+                    nodeDict['traffic']['forward'] = stats
                     continue
 
+                # handle node and managed traffic for both rx and tx
                 if tkey in ('rx', 'tx'):
                     ttype = 'node'
                     tdir = tkey
                 elif tkey.startswith('mgmt_'):
                     ttype = 'managed'
                     tdir = tkey.split('_')[1]
-                self.nodes[nodeID][ttype][tdir] = stats
+                nodeDict['traffic'][ttype][tdir] = stats
 
 
         # neighbours
+
+        # generate type mapping for interface
         macTypeMapping = {}
         if 'mesh' in nodeInfo.get('network', {}):
             for batID, batVal in nodeInfo['network']['mesh'].items():
@@ -144,6 +162,9 @@ class DataHandler(object):
                     for ifType, ifVal in batVal['interfaces'].items():
                         for mac in ifVal:
                             macTypeMapping[mac] = ifType
+        print(macTypeMapping)
+
+        # get informations about interfaces and neighbours for both batadv and wifi
         for ttype, tvalue in nodeData['neighbours'].items():
             if ttype == 'node_id':
                 continue
@@ -155,9 +176,12 @@ class DataHandler(object):
                     ifPrefix = macTypeMapping[iname]
                 else:
                     ifPrefix = 'unknown'
+                ifDict = nodeDict[ttype]['interfaces'][''.join((ifPrefix, '_', inameid))]
                 for nname, nvalue in ivalue['neighbours'].items():
                     nnameid = nname.replace(':', '')
-                    self.nodes[nodeID][ttype][''.join((ifPrefix, '_', inameid))][nnameid] = nvalue
+                    ifDict['links'][nnameid] = nvalue
+                ifDict['count'] = len(ifDict['links'])
+            ifDict = nodeDict[ttype]['count'] = len(nodeDict[ttype]['interfaces'])
 
 
     def __isAdvNode__(self,nodeID,data):
@@ -177,16 +201,19 @@ class DataHandler(object):
     @staticmethod
     def __domain_dict__():
         return {
-            'nodes_count' : 0,
-            'nodes_online_count' : 0,
-            'clients_online_count' : collections.defaultdict(int),
-            'location_count' : 0,
-            'firmware_count' : collections.defaultdict(int),
-            'branch_count' : collections.defaultdict(int),
-            'autoupdater_enabled_count' : 0,
-            'hardware_count' : collections.defaultdict(int),
-            'selected_gateway_count' : collections.defaultdict(int),
-            'batadv_version_count' : collections.defaultdict(int)
+            'nodes' : 0,
+            'nodes_online' : 0,
+            'nodes_with_uplink' : 0,
+            'nodes_mesh_only' : 0,
+            'clients_online' : collections.defaultdict(int),
+            'location' : 0,
+            'firmware' : collections.defaultdict(int),
+            'branch' : collections.defaultdict(int),
+            'autoupdater_enabled' : 0,
+            'hardware' : collections.defaultdict(int),
+            'selected_gateway' : collections.defaultdict(int),
+            'batadv_version' : collections.defaultdict(int),
+            'contact' : 0
         }
 
     @staticmethod
