@@ -30,23 +30,20 @@ class GraphiteHandler(object):
     def __init__(self,server,port):
         self.server = server
         self.port = port
-        self.message = ""
+        self.message = ''
+        self.entries = []
+        self.specialChars = dict.fromkeys(map(ord, ' +.\\/-'), '_')
 
     def prepareMessage(self, domains, nodes):
         self.__nestedWalker__('nodes',domains)
         self.__nestedWalker__('node',nodes)
+        self.message = self.message.join(self.entries)
+        print(len(self.message))
 
     def __nestedWalker__(self, prefix, tree):
         if isinstance(tree, dict):
             for k, v in tree.items():
-                self.__nestedWalker__(prefix+'.'+GraphiteHandler.__cleanstr__(k),v)
+                self.__nestedWalker__(''.join((prefix, '.', k.translate(self.specialChars))),v)
         else:
-            print(prefix,tree)
-
-    @staticmethod
-    def __cleanstr__(cleanstr):
-        specialChars = [" ","+",".","\\","/","-"]
-        for char in specialChars:
-            cleanstr = cleanstr.replace(char,"_")
-        cleanstr = cleanstr.replace(":","")
-        return cleanstr
+            # credits to https://wiki.python.org/moin/PythonSpeed/PerformanceTips#String_Concatenation
+            self.entries.append(''.join((prefix, ' ', str(tree), '\n')))

@@ -157,7 +157,7 @@ class DataHandler(object):
                     ifPrefix = 'unknown'
                 for nname, nvalue in ivalue['neighbours'].items():
                     nnameid = nname.replace(':', '')
-                    self.nodes[nodeID][ttype][ifPrefix + '_' + inameid][nnameid] = nvalue
+                    self.nodes[nodeID][ttype][''.join((ifPrefix, '_', inameid))][nnameid] = nvalue
 
 
     def __isAdvNode__(self,nodeID,data):
