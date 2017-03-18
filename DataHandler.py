@@ -47,7 +47,7 @@ class DataHandler(object):
             self.__operateNode__(nodeID, nodeData)
             # except:
             #     print('Error while operating on node ' + nodeID + ' goto next node.', file=sys.stderr)
-        print(json.dumps(self.domains, sort_keys=True, indent=4))
+        # print(json.dumps(self.domains, sort_keys=True, indent=4))
         # print(json.dumps(self.nodes, sort_keys=True, indent=4))
         # print(self.gatewayIDs)
 
@@ -65,6 +65,7 @@ class DataHandler(object):
         nodeDict = self.nodes[nodeID]
 
         nodeGateway = None
+        nodeGatewayNexthop = None
 
         siteDict['nodes_all'] += 1
         
@@ -94,6 +95,7 @@ class DataHandler(object):
         if 'gateway' in nodeStats:
             nodeGateway = nodeStats['gateway'].replace(':','')
             if 'gateway_nexthop' in nodeStats:
+                nodeGatewayNexthop = nodeStats['gateway_nexthop'].replace(':','')
                 if nodeStats['gateway'] == nodeStats['gateway_nexthop']:
                     siteDict['nodes_with_uplink'] += 1
                 else:
@@ -185,6 +187,10 @@ class DataHandler(object):
                 ifDict = nodeDict[ttype]['interfaces'][''.join((ifPrefix, '_', inameid))]
                 for nname, nvalue in ivalue['neighbours'].items():
                     nnameid = nname.replace(':', '')
+                    if nnameid == nodeGateway:
+                        nodeDict[ttype]['gateway'][nnameid] = nvalue
+                    elif nnameid == nodeGatewayNexthop:
+                        nodeDict[ttype]['gateway_nexthop'][nnameid] = nvalue
                     ifDict['links'][nnameid] = nvalue
                 ifDict['count'] = len(ifDict['links'])
             ifDict = nodeDict[ttype]['count'] = len(nodeDict[ttype]['interfaces'])
