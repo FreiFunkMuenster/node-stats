@@ -47,7 +47,7 @@ class DataHandler(object):
             self.__operateNode__(nodeID, nodeData)
             # except:
             #     print('Error while operating on node ' + nodeID + ' goto next node.', file=sys.stderr)
-        # print(json.dumps(self.domains, sort_keys=True, indent=4))
+        print(json.dumps(self.domains, sort_keys=True, indent=4, default=AvgEntry.cdefault))
         # print(json.dumps(self.nodes, sort_keys=True, indent=4))
         # print(self.gatewayIDs)
 
@@ -67,23 +67,23 @@ class DataHandler(object):
         nodeGateway = None
         nodeGatewayNexthop = None
 
-        siteDict['nodes_all'] += 1
+        siteDict['nodes_count']['nodes_all'] += 1
         
         # continue if node is online only
         if not isOnline:
             return
         
-        siteDict['nodes_online'] += 1
+        siteDict['nodes_count']['nodes_online'] += 1
 
 
         if 'model' in nodeInfo.get('hardware', {}):
             siteDict['hardware'][nodeInfo['hardware']['model']] += 1
 
         if 'location' in nodeInfo:
-            siteDict['location'] += 1
+            siteDict['nodes_count']['has_location'] += 1
 
         if 'contact' in nodeInfo.get('owner', {}):
-            siteDict['contact'] += 1
+            siteDict['nodes_count']['has_contact'] += 1
 
         # store all client count type
         if 'clients' in nodeStats:
@@ -97,9 +97,9 @@ class DataHandler(object):
             if 'gateway_nexthop' in nodeStats:
                 nodeGatewayNexthop = nodeStats['gateway_nexthop'].replace(':','')
                 if nodeStats['gateway'] == nodeStats['gateway_nexthop']:
-                    siteDict['nodes_with_uplink'] += 1
+                    siteDict['nodes_count']['nodes_with_uplink'] += 1
                 else:
-                    siteDict['nodes_mesh_only'] += 1
+                    siteDict['nodes_count']['nodes_mesh_only'] += 1
             if nodeGateway not in self.gatewayIDs:
                 self.gatewayIDs.append(nodeGateway)
             siteDict['selected_gateway'][nodeGateway] += 1 
@@ -233,13 +233,9 @@ class DataHandler(object):
     @staticmethod
     def __domain_dict__():
         return {
-            'nodes_all' : 0,
-            'nodes_online' : 0,
-            'nodes_with_uplink' : 0,
-            'nodes_mesh_only' : 0,
+            'nodes_count' : collections.defaultdict(int),
             'averages' : collections.defaultdict(AvgEntry),
             'clients_online' : collections.defaultdict(int),
-            'location' : 0,
             'firmware' : {
                 'release' : collections.defaultdict(int),
                 'base' : collections.defaultdict(int)
@@ -248,8 +244,7 @@ class DataHandler(object):
             'autoupdater_enabled' : 0,
             'hardware' : collections.defaultdict(int),
             'selected_gateway' : collections.defaultdict(int),
-            'batadv_version' : collections.defaultdict(int),
-            'contact' : 0
+            'batadv_version' : collections.defaultdict(int)
         }
 
     @staticmethod
@@ -273,3 +268,9 @@ class AvgEntry(object):
     # overloading str() operator so no changes to DataHandler are required
     def __str__(self):
         return '{0}'.format(self.avg())
+
+    @staticmethod
+    def cdefault(o):
+        if isinstance(o, AvgEntry):
+            return str(o)
+        return o.__dict__
