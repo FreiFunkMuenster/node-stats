@@ -38,7 +38,7 @@ class GraphiteHandler(object):
         self.__nestedWalker__('nodes',domains)
         self.__nestedWalker__('node',nodes)
         self.message = self.message.join(self.entries)
-        print(len(self.message))
+        print(self.message)
 
     def __nestedWalker__(self, prefix, tree):
         if isinstance(tree, dict):

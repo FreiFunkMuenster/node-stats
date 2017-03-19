@@ -30,7 +30,7 @@ class DataHandler(object):
         self.data = jsonData
         self.config = config
         self._offlineTime = datetime.datetime.utcnow() - datetime.timedelta(seconds=self.config['offline_last_seen_s'])
-        self.advNodeIDs =  self.__readAdvancedNodesFile__(os.path.dirname(os.path.realpath(__file__)) + '/advnodes')
+        self.advNodeIDs =  self.config['adv_node_stats']
         self.gatewayIDs = list()
         self.domains = collections.defaultdict(DataHandler.__domain_dict__)
         self.nodes = DataHandler.__nested_dict__()
