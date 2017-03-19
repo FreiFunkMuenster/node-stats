@@ -138,7 +138,7 @@ class DataHandler(object):
                     nnameid = nname.replace(':', '')
                     if nnameid == nodeGateway:
                         if 'tq' in nvalue:
-                            siteDict['averages']['gateway_tq'].append(nvalue['tq'])
+                            siteDict['averages']['gateway_uplink_tq'].append(nvalue['tq'])
                     elif nnameid == nodeGatewayNexthop:
                         if 'tq' in nvalue:
                             siteDict['averages']['gateway_nexthop_tq'].append(nvalue['tq'])

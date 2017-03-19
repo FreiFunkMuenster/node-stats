@@ -1,47 +1,51 @@
 #!/usr/bin/env python3
 # -*- coding: utf8 -*-
-#
-# (c) 2015 dray <dresen@itsecteam.ms>
-#
-# This script is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License or any later version.
-#
-# This script is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY.  See the
-# GNU General Public License for more details.
-#
-# For a copy of the GNU General Public License
-# see <http://www.gnu.org/licenses/>.
-#
-#
+
+# MIT License
+
+# Copyright (c) 2017 Simon Wüllhorst
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
 import argparse
-from JsonManager import JsonManager
-from GraphiteManager import GraphiteManager
+from JsonHandler import JsonHandler
+from DataHandler import DataHandler
+from GraphiteHandler import GraphiteHandler
 
-parser = argparse.ArgumentParser(description='This Script gets information about Freifunk Muenster')
-parser.add_argument('--server', required=True, help='Server')
-parser.add_argument('--port', required=True, help='Port', default=2003)
-parser.add_argument('--batif', required=True, help='Batman interface', default='bat0')
-parser.add_argument('--domain', help='Freifunk Domäne', default='legacy')
-parser.add_argument('--local', help='Load local json files (alfred_158.json,alfred_159.json)', action='store_true')
-parser.add_argument('--print-only', help='Print only', action='store_true')
-args = parser.parse_args()
+def main():
+    args = __parseArguments__()
+    config = JsonHandler('./config.json')
+    rawJson = JsonHandler(args.hopglass_raw)
+    handler = DataHandler(rawJson.data, config.data)
+    handler.convert()
+    graphiteHandler = GraphiteHandler(args.server, args.port)
+    graphiteHandler.prepareMessage(handler.domains, handler.nodes)
 
-jsonManager = JsonManager()
-if args.local:
-    jsonManager.loadJson()
-else:
-    jsonManager.loadJsonFromRespondd(args.batif)
-jsonManager.processJson158()
-jsonManager.processJson159()
-jsonManager.processJson160()
 
-graphiteManager = GraphiteManager(args.server, args.port, args.domain)
-graphiteManager.prepareMessage(jsonManager.result)
+def __parseArguments__():
+    parser = argparse.ArgumentParser(description='This Script is a link between Hopglass-Server and Graphite.')
+    parser.add_argument('--server', required=False, help='Graphite Server', default='127.0.0.1')
+    parser.add_argument('--port', required=False, help='Graphite Port', default=2003)
+    parser.add_argument('--hopglass-raw', help='Hopglass raw.json source.', default='./raw.json')
+    parser.add_argument('--print-only', help='Print only', action='store_true')
+    
+    return parser.parse_args()
 
-if args.print_only:
-    graphiteManager.printout()
-else:
-    graphiteManager.send()
+if __name__ == '__main__':
+	main()
