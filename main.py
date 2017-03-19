@@ -30,7 +30,7 @@ from GraphiteHandler import GraphiteHandler
 
 def main():
     args = __parseArguments__()
-    config = JsonHandler('./config.json')
+    config = JsonHandler(args.config)
     rawJson = JsonHandler(args.hopglass_raw)
     handler = DataHandler(rawJson.data, config.data)
     handler.convert()
@@ -40,10 +40,9 @@ def main():
 
 def __parseArguments__():
     parser = argparse.ArgumentParser(description='This Script is a link between Hopglass-Server and Graphite.')
-    parser.add_argument('--server', required=False, help='Graphite Server', default='127.0.0.1')
-    parser.add_argument('--port', required=False, help='Graphite Port', default=2003)
-    parser.add_argument('--hopglass-raw', help='Hopglass raw.json source.', default='./raw.json')
-    parser.add_argument('--print-only', help='Print only', action='store_true')
+    parser.add_argument('-g', '--hopglass-raw', help='Hopglass raw.json source. Default: ./raw.json', default='./raw.json')
+    parser.add_argument('-c', '--config', help='node-stats config file location Default: ./config.json', default='./config.json')
+    parser.add_argument('-p', '--print-only', help='Print only', action='store_true')
     
     return parser.parse_args()
 
