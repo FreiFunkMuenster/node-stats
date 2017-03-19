@@ -123,6 +123,26 @@ class DataHandler(object):
                 if sw['autoupdater']['enabled']:
                     siteDict['autoupdater_enabled'] += 1
 
+
+        # avg stats
+        for key in ('uptime', 'idletime', 'loadavg'):
+            if key in nodeStats:
+                siteDict['averages'][key].append(nodeStats[key])
+
+        # avg gateway and gateway_nexthop tq
+        if 'batadv' in nodeData['neighbours']:
+            for iname, ivalue in nodeData['neighbours']['batadv'].items():
+                if not 'neighbours' in ivalue:
+                    continue
+                for nname, nvalue in ivalue['neighbours'].items():
+                    nnameid = nname.replace(':', '')
+                    if nnameid == nodeGateway:
+                        if 'tq' in nvalue:
+                            siteDict['averages']['gateway_tq'].append(nvalue['tq'])
+                    elif nnameid == nodeGatewayNexthop:
+                        if 'tq' in nvalue:
+                            siteDict['averages']['gateway_nexthop_tq'].append(nvalue['tq'])
+
         # do the advanced node info stuff
         if not self.__isAdvNode__(nodeID,nodeData):
             return
@@ -217,6 +237,7 @@ class DataHandler(object):
             'nodes_online' : 0,
             'nodes_with_uplink' : 0,
             'nodes_mesh_only' : 0,
+            'averages' : collections.defaultdict(AvgEntry),
             'clients_online' : collections.defaultdict(int),
             'location' : 0,
             'firmware' : {
@@ -236,3 +257,19 @@ class DataHandler(object):
         """Create always nested dict. So we do not have to check whether the parent dict exists."""
         # credits to https://stackoverflow.com/a/36299615
         return collections.defaultdict(DataHandler.__nested_dict__)
+
+class AvgEntry(object):
+    def __init__(self):
+        self._dataset = []
+
+    def append(self, val):
+        self._dataset.append(val)
+
+    def avg(self):
+        if not self._dataset:
+            return 0
+        return sum(self._dataset)/float(len(self._dataset))
+
+    # overloading str() operator so no changes to DataHandler are required
+    def __str__(self):
+        return '{0}'.format(self.avg())
