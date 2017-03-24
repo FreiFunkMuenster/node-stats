@@ -32,16 +32,18 @@ def main():
     args = __parseArguments__()
     config = JsonHandler(args.config)
     rawJson = JsonHandler(args.hopglass_raw)
-    handler = DataHandler(rawJson.data, config.data)
+    handler = DataHandler(rawJson.data, config.data, args.alternative_now)
     handler.convert()
-    graphiteHandler = GraphiteHandler(args.server, args.port)
+    graphiteHandler = GraphiteHandler(config.data['graphite_target']['server'], config.data['graphite_target']['port'], args.alternative_now)
     graphiteHandler.prepareMessage(handler.domains, handler.nodes)
+    # print(graphiteHandler.message)
 
 
 def __parseArguments__():
     parser = argparse.ArgumentParser(description='This Script is a link between Hopglass-Server and Graphite.')
     parser.add_argument('-g', '--hopglass-raw', help='Hopglass raw.json source. Default: ./raw.json', default='./raw.json')
     parser.add_argument('-c', '--config', help='node-stats config file location Default: ./config.json', default='./config.json')
+    parser.add_argument('-n', '--alternative-now', help='Set a fake now date.', required=False)
     parser.add_argument('-p', '--print-only', help='Print only', action='store_true')
     
     return parser.parse_args()

@@ -24,15 +24,20 @@
 # SOFTWARE.
 
 
-import socket, time
+import socket, datetime, time
 
 class GraphiteHandler(object):
-    def __init__(self,server,port):
+    def __init__(self, server, port, alternative_now = None):
         self.server = server
         self.port = port
         self.message = ''
         self.entries = []
         self.specialChars = dict.fromkeys(map(ord, ' +.\\/-'), '_')
+
+        if alternative_now:
+            self.utc_stamp_now = datetime.datetime.strptime(alternative_now, '%Y-%m-%d_%H-%M-%S').strftime("%s")
+        else:
+            self.utc_stamp_now = datetime.datetime.now().strftime("%s")
 
     def prepareMessage(self, domains, nodes):
         self.__nestedWalker__('nodes',domains)
@@ -46,4 +51,4 @@ class GraphiteHandler(object):
                 self.__nestedWalker__(''.join((prefix, '.', k.translate(self.specialChars))),v)
         else:
             # credits to https://wiki.python.org/moin/PythonSpeed/PerformanceTips#String_Concatenation
-            self.entries.append(''.join((prefix, ' ', str(tree), '\n')))
+            self.entries.append(''.join((prefix, ' ', str(tree), ' ', self.utc_stamp_now ,'\n')))

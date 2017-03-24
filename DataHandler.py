@@ -24,12 +24,17 @@
 # SOFTWARE.
 
 import sys, os, collections, json, datetime
+import dateutil.tz
 
 class DataHandler(object):
-    def __init__(self, jsonData, config):
+    def __init__(self, jsonData, config, alternative_now = None):
         self.data = jsonData
         self.config = config
-        self._offlineTime = datetime.datetime.utcnow() - datetime.timedelta(seconds=self.config['offline_last_seen_s'])
+        if alternative_now:
+            self.now = datetime.datetime.strptime(alternative_now, '%Y-%m-%d_%H-%M-%S')
+        else:
+            self.now = datetime.datetime.utcnow()
+        self._offlineTime = self.now - datetime.timedelta(seconds=self.config['offline_last_seen_s'])
         self.advNodeIDs =  self.config['adv_node_stats']
         self.gatewayIDs = list()
         self.domains = collections.defaultdict(DataHandler.__domain_dict__)
@@ -47,13 +52,13 @@ class DataHandler(object):
             self.__operateNode__(nodeID, nodeData)
             # except:
             #     print('Error while operating on node ' + nodeID + ' goto next node.', file=sys.stderr)
-        print(json.dumps(self.domains, sort_keys=True, indent=4, default=AvgEntry.cdefault))
+        # print(json.dumps(self.domains, sort_keys=True, indent=4, default=AvgEntry.cdefault))
         # print(json.dumps(self.nodes, sort_keys=True, indent=4))
         # print(self.gatewayIDs)
 
     def __operateNode__(self, nodeID, nodeData):
 
-        nodeLastSeen = datetime.datetime.strptime(nodeData['lastseen'], '%Y-%m-%dT%H:%M:%S.%fZ')
+        nodeLastSeen = datetime.datetime.strptime(nodeData['lastseen'], '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=dateutil.tz.tzutc()).astimezone(dateutil.tz.tzlocal()).replace(tzinfo=None)
         isOnline = nodeLastSeen > self._offlineTime
 
         nodeInfo = nodeData['nodeinfo']
