@@ -32,7 +32,9 @@ def main():
     args = __parseArguments__()
     config = JsonHandler(args.config)
     rawJson = JsonHandler(args.hopglass_raw)
-    handler = DataHandler(rawJson.data, config.data, args.alternative_now)
+    rawType = DataHandler.TYPE_NODES_JSON if 'nodes' in rawJson.data else DataHandler.TYPE_RAW_JSON
+        #detected nodes.json instead raw.json
+    handler = DataHandler(rawJson.data, config.data, args.alternative_now, rawType)
     handler.convert()
     graphiteHandler = GraphiteHandler(config.data['graphite_target']['server'], config.data['graphite_target']['port'], args.alternative_now)
     graphiteHandler.prepareMessage(handler.domains, handler.nodes)

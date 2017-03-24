@@ -27,8 +27,15 @@ import sys, os, collections, json, datetime
 import dateutil.tz
 
 class DataHandler(object):
-    def __init__(self, jsonData, config, alternative_now = None):
-        self.data = jsonData
+    TYPE_RAW_JSON = 0
+    TYPE_NODES_JSON = 1
+    def __init__(self, jsonData, config, alternative_now = None, jsonDataType = 0):
+        if jsonDataType == DataHandler.TYPE_NODES_JSON:
+            self.data = jsonData['nodes']
+        else:
+            self.data = jsonData
+
+        self.dataType = jsonDataType
         self.config = config
         if alternative_now:
             self.now = datetime.datetime.strptime(alternative_now, '%Y-%m-%d_%H-%M-%S')
@@ -43,6 +50,8 @@ class DataHandler(object):
     def convert(self):
         for nodeID, nodeData in self.data.items():
 
+            if self.dataType == DataHandler.TYPE_NODES_JSON:
+                nodeData['neighbours'] = {}
             # credits to https://stackoverflow.com/a/1285926
             # A is not a subset of B
             if not set(('nodeinfo', 'statistics', 'neighbours')) <= set(nodeData):
@@ -52,13 +61,16 @@ class DataHandler(object):
             self.__operateNode__(nodeID, nodeData)
             # except:
             #     print('Error while operating on node ' + nodeID + ' goto next node.', file=sys.stderr)
-        # print(json.dumps(self.domains, sort_keys=True, indent=4, default=AvgEntry.cdefault))
+        print(json.dumps(self.domains, sort_keys=True, indent=4, default=AvgEntry.cdefault))
         # print(json.dumps(self.nodes, sort_keys=True, indent=4))
         # print(self.gatewayIDs)
 
     def __operateNode__(self, nodeID, nodeData):
+        if self.dataType == self.TYPE_RAW_JSON:
+            nodeLastSeen = datetime.datetime.strptime(nodeData['lastseen'], '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=dateutil.tz.tzutc()).astimezone(dateutil.tz.tzlocal()).replace(tzinfo=None)
+        else:
+            nodeLastSeen = datetime.datetime.strptime(nodeData['lastseen'], '%Y-%m-%dT%H:%M:%S').replace(tzinfo=dateutil.tz.tzutc()).astimezone(dateutil.tz.tzlocal()).replace(tzinfo=None)
 
-        nodeLastSeen = datetime.datetime.strptime(nodeData['lastseen'], '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=dateutil.tz.tzutc()).astimezone(dateutil.tz.tzlocal()).replace(tzinfo=None)
         isOnline = nodeLastSeen > self._offlineTime
 
         nodeInfo = nodeData['nodeinfo']
@@ -92,9 +104,13 @@ class DataHandler(object):
 
         # store all client count type
         if 'clients' in nodeStats:
-            for cltype, clcount in nodeStats['clients'].items():
-                siteDict['clients_online'][cltype] += clcount
-            nodeDict['clients_online'] = nodeStats['clients']
+            if type(nodeStats['clients']) == dict:
+                for cltype, clcount in nodeStats['clients'].items():
+                    siteDict['clients_online'][cltype] += clcount
+                nodeDict['clients_online'] = nodeStats['clients']
+            elif type(nodeStats['clients']) == int:
+                siteDict['clients_online']['total'] += nodeStats['clients']
+                nodeDict['clients_online']['total'] = nodeStats['clients']
 
         # infos about gateway and next hop
         if 'gateway' in nodeStats:
