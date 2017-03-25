@@ -123,7 +123,8 @@ class DataHandler(object):
                     siteDict['nodes_count']['nodes_mesh_only'] += 1
             if nodeGateway not in self.gatewayIDs:
                 self.gatewayIDs.append(nodeGateway)
-            siteDict['selected_gateway'][nodeGateway] += 1 
+            siteDict['selected_gateway'][nodeGateway]['nodes_count'] += 1
+            siteDict['selected_gateway'][nodeGateway]['clients_count'] += nodeDict['clients_online']['total']
 
         # infos about firmware and autoupdater
         if 'software' in nodeInfo:
@@ -264,9 +265,13 @@ class DataHandler(object):
             'branch' : collections.defaultdict(int),
             'autoupdater_enabled' : 0,
             'hardware' : collections.defaultdict(int),
-            'selected_gateway' : collections.defaultdict(int),
+            'selected_gateway' : collections.defaultdict(DataHandler.__int_dict__),
             'batadv_version' : collections.defaultdict(int)
         }
+
+    @staticmethod
+    def __int_dict__():
+        return collections.defaultdict(int)
 
     @staticmethod
     def __nested_dict__():
