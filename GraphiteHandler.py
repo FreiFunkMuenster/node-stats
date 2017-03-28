@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf8 -*-
 
 # MIT License
@@ -24,7 +23,9 @@
 # SOFTWARE.
 
 
-import socket, datetime, time
+import socket
+import datetime
+
 
 class GraphiteHandler(object):
     def __init__(self, server, port, alternative_now = None):
@@ -40,15 +41,15 @@ class GraphiteHandler(object):
             self.utc_stamp_now = datetime.datetime.now().strftime("%s")
 
     def prepareMessage(self, domains, nodes):
-        self.__nestedWalker__('nodes',domains)
-        self.__nestedWalker__('node',nodes)
+        self.__nestedWalker__('nodes', domains)
+        self.__nestedWalker__('node', nodes)
         self.message = self.message.join(self.entries)
         # print(self.message)
 
     def __nestedWalker__(self, prefix, tree):
         if isinstance(tree, dict):
             for k, v in tree.items():
-                self.__nestedWalker__(''.join((prefix, '.', k.translate(self.specialChars))),v)
+                self.__nestedWalker__(''.join((prefix, '.', k.translate(self.specialChars))), v)
         else:
             # credits to https://wiki.python.org/moin/PythonSpeed/PerformanceTips#String_Concatenation
-            self.entries.append(''.join((prefix, ' ', str(tree), ' ', self.utc_stamp_now ,'\n')))
+            self.entries.append(''.join((prefix, ' ', str(tree), ' ', self.utc_stamp_now , '\n')))

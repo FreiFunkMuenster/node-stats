@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf8 -*-
 
 # MIT License
@@ -23,13 +22,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import json, sys, urllib.request
+import json
+import sys
+import urllib.request
+
+
 class JsonHandler(object):
     def __init__(self, fileName):
         self.fileName = fileName
         self.printStatus = True
         self.__jsonData__ = self.__getFile__(fileName)
-    
+
     @property
     def data(self):
         return self.__jsonData__
@@ -49,8 +52,8 @@ class JsonHandler(object):
         else:
             if self.printStatus:
                 print('Open', fileName.rsplit('/', 1)[-1] , 'from file:', fileName)
-            with open(fileName) as data_file:  
-                try:  
+            with open(fileName) as data_file:
+                try:
                     data = json.load(data_file)
                 except:
                     print('Error while parsing a json file (perhapes misformed file): ' + fileName, file=sys.stderr)

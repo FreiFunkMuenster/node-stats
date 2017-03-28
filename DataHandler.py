@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf8 -*-
 
 # MIT License
@@ -23,12 +22,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import sys, os, collections, json, datetime
+import os
+import collections
+import json
+import datetime
 import dateutil.tz
+
 
 class DataHandler(object):
     TYPE_RAW_JSON = 0
     TYPE_NODES_JSON = 1
+
     def __init__(self, jsonData, config, alternative_now = None, jsonDataType = 0):
         if jsonDataType == DataHandler.TYPE_NODES_JSON:
             self.data = jsonData['nodes']
@@ -42,7 +46,7 @@ class DataHandler(object):
         else:
             self.now = datetime.datetime.utcnow()
         self._offlineTime = self.now - datetime.timedelta(seconds=self.config['offline_last_seen_s'])
-        self.advNodeIDs =  self.config['adv_node_stats']
+        self.advNodeIDs = self.config['adv_node_stats']
         self.gatewayIDs = list()
         self.domains = collections.defaultdict(DataHandler.__domain_dict__)
         self.nodes = DataHandler.__nested_dict__()
@@ -85,13 +89,12 @@ class DataHandler(object):
         nodeGatewayNexthop = None
 
         siteDict['nodes_count']['nodes_all'] += 1
-        
+
         # continue if node is online only
         if not isOnline:
             return
-        
-        siteDict['nodes_count']['nodes_online'] += 1
 
+        siteDict['nodes_count']['nodes_online'] += 1
 
         if 'model' in nodeInfo.get('hardware', {}):
             siteDict['hardware'][nodeInfo['hardware']['model']] += 1
@@ -114,9 +117,9 @@ class DataHandler(object):
 
         # infos about gateway and next hop
         if 'gateway' in nodeStats:
-            nodeGateway = nodeStats['gateway'].replace(':','')
+            nodeGateway = nodeStats['gateway'].replace(':', '')
             if 'gateway_nexthop' in nodeStats:
-                nodeGatewayNexthop = nodeStats['gateway_nexthop'].replace(':','')
+                nodeGatewayNexthop = nodeStats['gateway_nexthop'].replace(':', '')
                 if nodeStats['gateway'] == nodeStats['gateway_nexthop']:
                     siteDict['nodes_count']['nodes_with_uplink'] += 1
                 else:
@@ -136,15 +139,14 @@ class DataHandler(object):
             if 'base' in sw.get('firmware', {}):
                 siteDict['firmware']['base'][sw['firmware']['base']] += 1
 
-            if 'version' in sw.get('batman-adv',{}):
-                siteDict['batadv_version'][sw['batman-adv']['version']]+= 1
+            if 'version' in sw.get('batman-adv', {}):
+                siteDict['batadv_version'][sw['batman-adv']['version']] += 1
 
             if 'autoupdater' in sw:
                 if 'branch' in sw['autoupdater']:
                     siteDict['branch'][sw['autoupdater']['branch']] += 1
                 if sw['autoupdater']['enabled']:
                     siteDict['autoupdater_enabled'] += 1
-
 
         # avg stats
         for key in ('uptime', 'idletime', 'loadavg'):
@@ -154,7 +156,7 @@ class DataHandler(object):
         # avg gateway and gateway_nexthop tq
         if 'batadv' in nodeData['neighbours']:
             for iname, ivalue in nodeData['neighbours']['batadv'].items():
-                if not 'neighbours' in ivalue:
+                if 'neighbours' not in ivalue:
                     continue
                 for nname, nvalue in ivalue['neighbours'].items():
                     nnameid = nname.replace(':', '')
@@ -166,7 +168,7 @@ class DataHandler(object):
                             siteDict['averages']['gateway_nexthop_tq'].append(nvalue['tq'])
 
         # do the advanced node info stuff
-        if not self.__isAdvNode__(nodeID,nodeData):
+        if not self.__isAdvNode__(nodeID, nodeData):
             return
 
         # statistics
@@ -201,7 +203,6 @@ class DataHandler(object):
                     tdir = tkey.split('_')[1]
                 nodeDict['traffic'][ttype][tdir] = stats
 
-
         # neighbours
 
         # generate type mapping for interface
@@ -219,7 +220,7 @@ class DataHandler(object):
             if ttype == 'node_id':
                 continue
             for iname, ivalue in tvalue.items():
-                if not 'neighbours' in ivalue:
+                if 'neighbours' not in ivalue:
                     continue
                 inameid = iname.replace(':', '')
                 if iname in macTypeMapping:
@@ -237,14 +238,13 @@ class DataHandler(object):
                 ifDict['count'] = len(ifDict['links'])
             ifDict = nodeDict[ttype]['count'] = len(nodeDict[ttype]['interfaces'])
 
-
-    def __isAdvNode__(self,nodeID,data):
+    def __isAdvNode__(self, nodeID, data):
         try:
             return nodeID in self.advNodeIDs or data['nodeinfo']['advanced-stats']['store-stats']
         except:
             return False
 
-    def __readAdvancedNodesFile__(self,filename):
+    def __readAdvancedNodesFile__(self, filename):
         advnodes = list()
         if os.path.isfile(filename):
             with open(filename) as f:
@@ -279,6 +279,7 @@ class DataHandler(object):
         # credits to https://stackoverflow.com/a/36299615
         return collections.defaultdict(DataHandler.__nested_dict__)
 
+
 class AvgEntry(object):
     def __init__(self):
         self._dataset = []
@@ -289,7 +290,7 @@ class AvgEntry(object):
     def avg(self):
         if not self._dataset:
             return 0
-        return sum(self._dataset)/float(len(self._dataset))
+        return sum(self._dataset) / float(len(self._dataset))
 
     # overloading str() operator so no changes to DataHandler are required
     def __str__(self):
