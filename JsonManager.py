@@ -36,7 +36,7 @@ class JsonManager:
         message = 'GET ' + command
         sock.sendto(message, ('ff02::1', 1001, 0, if_id))
 
-        sock.settimeout(0.75) # wait 750 ms w/o any response before finish
+        sock.settimeout(1.25) # wait 1250 ms w/o any response before finish
 
         # receive
         responses = {}
