@@ -44,7 +44,7 @@ class GraphiteHandler(object):
         self.__nestedWalker__('nodes', domains)
         self.__nestedWalker__('node', nodes)
         self.message = self.message.join(self.entries)
-        # print(self.message)
+        self.send(self.message)
 
     def __nestedWalker__(self, prefix, tree):
         if isinstance(tree, dict):
@@ -53,3 +53,10 @@ class GraphiteHandler(object):
         else:
             # credits to https://wiki.python.org/moin/PythonSpeed/PerformanceTips#String_Concatenation
             self.entries.append(''.join((prefix, ' ', str(tree), ' ', self.utc_stamp_now , '\n')))
+
+    def send(self, message):
+        print("hi")
+        sock = socket.socket()
+        sock.connect((self.server, int(self.port)))
+        sock.sendall(message.encode())
+        sock.close()

@@ -65,7 +65,7 @@ class DataHandler(object):
             self.__operateNode__(nodeID, nodeData)
             # except:
             #     print('Error while operating on node ' + nodeID + ' goto next node.', file=sys.stderr)
-        print(json.dumps(self.domains, sort_keys=True, indent=4, default=AvgEntry.cdefault))
+        # print(json.dumps(self.domains, sort_keys=True, indent=4, default=AvgEntry.cdefault))
         # print(json.dumps(self.nodes, sort_keys=True, indent=4))
         # print(self.gatewayIDs)
 

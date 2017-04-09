@@ -1,7 +1,7 @@
 {
 	"offline_last_seen_s" : 1200,
 	"graphite_target" : {
-		"server" : "127.0.0.1",
+		"server" : "148.251.45.18",
 		"port" : 2003
 	},
 	"adv_node_stats" : [
