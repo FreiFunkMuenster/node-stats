@@ -50,6 +50,7 @@ class DataHandler(object):
         self.gatewayIDs = list()
         self.domains = collections.defaultdict(DataHandler.__domain_dict__)
         self.nodes = DataHandler.__nested_dict__()
+        self.interfaces = self.__mapIfIDtoNodeID__()
 
     def convert(self):
         for nodeID, nodeData in self.data.items():
@@ -81,6 +82,13 @@ class DataHandler(object):
         nodeStats = nodeData['statistics']
         site = nodeInfo['system']['site_code']
 
+
+        isInfrastructure = nodeInfo.get('node_type', {}).get('is_infrastructure', False)
+
+        # temporary workaround to import older time series
+        if nodeID.startswith(('02caffee', 'deadbeef')):
+            isInfrastructure = True
+
         # avoid dots
         siteDict = self.domains[site]
         nodeDict = self.nodes[nodeID]
@@ -94,78 +102,80 @@ class DataHandler(object):
         if not isOnline:
             return
 
-        siteDict['nodes_count']['nodes_online'] += 1
+        if not isInfrastructure:
+            siteDict['nodes_count']['nodes_online'] += 1
 
-        if 'model' in nodeInfo.get('hardware', {}):
-            siteDict['hardware'][nodeInfo['hardware']['model']] += 1
+            if 'model' in nodeInfo.get('hardware', {}):
+                siteDict['hardware'][nodeInfo['hardware']['model']] += 1
 
-        if 'location' in nodeInfo:
-            siteDict['nodes_count']['has_location'] += 1
+            if 'location' in nodeInfo:
+                siteDict['nodes_count']['has_location'] += 1
 
-        if 'contact' in nodeInfo.get('owner', {}):
-            siteDict['nodes_count']['has_contact'] += 1
+            if 'contact' in nodeInfo.get('owner', {}):
+                siteDict['nodes_count']['has_contact'] += 1
 
-        # store all client count type
-        if 'clients' in nodeStats:
-            if type(nodeStats['clients']) == dict:
-                for cltype, clcount in nodeStats['clients'].items():
-                    siteDict['clients_online'][cltype] += clcount
-                nodeDict['clients_online'] = nodeStats['clients']
-            elif type(nodeStats['clients']) == int:
-                siteDict['clients_online']['total'] += nodeStats['clients']
-                nodeDict['clients_online']['total'] = nodeStats['clients']
+            # avg stats
+            for key in ('uptime', 'idletime', 'loadavg'):
+                if key in nodeStats:
+                    siteDict['averages'][key].append(nodeStats[key])
 
-        # infos about gateway and next hop
-        if 'gateway' in nodeStats:
-            nodeGateway = nodeStats['gateway'].replace(':', '')
-            if 'gateway_nexthop' in nodeStats:
-                nodeGatewayNexthop = nodeStats['gateway_nexthop'].replace(':', '')
-                if nodeStats['gateway'] == nodeStats['gateway_nexthop']:
-                    siteDict['nodes_count']['nodes_with_uplink'] += 1
-                else:
-                    siteDict['nodes_count']['nodes_mesh_only'] += 1
-            if nodeGateway not in self.gatewayIDs:
-                self.gatewayIDs.append(nodeGateway)
-            siteDict['selected_gateway'][nodeGateway]['nodes_count'] += 1
-            siteDict['selected_gateway'][nodeGateway]['clients_count'] += nodeDict['clients_online']['total']
+            # avg gateway and gateway_nexthop tq
+            if 'batadv' in nodeData['neighbours']:
+                for iname, ivalue in nodeData['neighbours']['batadv'].items():
+                    if 'neighbours' not in ivalue:
+                        continue
+                    for nname, nvalue in ivalue['neighbours'].items():
+                        nnameid = nname.replace(':', '')
+                        if nnameid == nodeGateway:
+                            if 'tq' in nvalue:
+                                siteDict['averages']['gateway_uplink_tq'].append(nvalue['tq'])
+                        elif nnameid == nodeGatewayNexthop:
+                            if 'tq' in nvalue:
+                                siteDict['averages']['gateway_nexthop_tq'].append(nvalue['tq'])
 
-        # infos about firmware and autoupdater
-        if 'software' in nodeInfo:
-            sw = nodeInfo['software']
-            # credits to http://stackoverflow.com/a/18578210
-            if 'release' in sw.get('firmware', {}):
-                siteDict['firmware']['release'][sw['firmware']['release']] += 1
+            # store all client count type
+            if 'clients' in nodeStats:
+                if type(nodeStats['clients']) == dict:
+                    for cltype, clcount in nodeStats['clients'].items():
+                        siteDict['clients_online'][cltype] += clcount
+                    nodeDict['clients_online'] = nodeStats['clients']
+                elif type(nodeStats['clients']) == int:
+                    # in case of older (meshviewer v2) input data
+                    siteDict['clients_online']['total'] += nodeStats['clients']
+                    nodeDict['clients_online']['total'] = nodeStats['clients']
 
-            if 'base' in sw.get('firmware', {}):
-                siteDict['firmware']['base'][sw['firmware']['base']] += 1
+            # infos about gateway and next hop
+            if 'gateway' in nodeStats:
+                nodeGateway = nodeStats['gateway'].replace(':', '')
+                if 'gateway_nexthop' in nodeStats:
+                    nodeGatewayNexthop = nodeStats['gateway_nexthop'].replace(':', '')
+                    if nodeStats['gateway'] == nodeStats['gateway_nexthop']:
+                        siteDict['nodes_count']['nodes_with_uplink'] += 1
+                    else:
+                        siteDict['nodes_count']['nodes_mesh_only'] += 1
+                if nodeGateway not in self.gatewayIDs:
+                    self.gatewayIDs.append(nodeGateway)
+                siteDict['selected_gateway'][nodeGateway]['nodes_count'] += 1
+                siteDict['selected_gateway'][nodeGateway]['clients_count'] += nodeDict['clients_online']['total']
 
-            if 'version' in sw.get('batman-adv', {}):
-                siteDict['batadv_version'][sw['batman-adv']['version']] += 1
+            # infos about firmware and autoupdater
+            if 'software' in nodeInfo:
+                sw = nodeInfo['software']
+                # credits to http://stackoverflow.com/a/18578210
+                if 'release' in sw.get('firmware', {}):
+                    siteDict['firmware']['release'][sw['firmware']['release']] += 1
 
-            if 'autoupdater' in sw:
-                if 'branch' in sw['autoupdater']:
-                    siteDict['branch'][sw['autoupdater']['branch']] += 1
-                if sw['autoupdater']['enabled']:
-                    siteDict['autoupdater_enabled'] += 1
+                if 'base' in sw.get('firmware', {}):
+                    siteDict['firmware']['base'][sw['firmware']['base']] += 1
 
-        # avg stats
-        for key in ('uptime', 'idletime', 'loadavg'):
-            if key in nodeStats:
-                siteDict['averages'][key].append(nodeStats[key])
+                if 'version' in sw.get('batman-adv', {}):
+                    siteDict['batadv_version'][sw['batman-adv']['version']] += 1
 
-        # avg gateway and gateway_nexthop tq
-        if 'batadv' in nodeData['neighbours']:
-            for iname, ivalue in nodeData['neighbours']['batadv'].items():
-                if 'neighbours' not in ivalue:
-                    continue
-                for nname, nvalue in ivalue['neighbours'].items():
-                    nnameid = nname.replace(':', '')
-                    if nnameid == nodeGateway:
-                        if 'tq' in nvalue:
-                            siteDict['averages']['gateway_uplink_tq'].append(nvalue['tq'])
-                    elif nnameid == nodeGatewayNexthop:
-                        if 'tq' in nvalue:
-                            siteDict['averages']['gateway_nexthop_tq'].append(nvalue['tq'])
+                if 'autoupdater' in sw:
+                    if 'branch' in sw['autoupdater']:
+                        siteDict['firmware']['branch'][sw['autoupdater']['branch']] += 1
+                    if sw['autoupdater']['enabled']:
+                        siteDict['firmware']['autoupdater_enabled'] += 1
 
         # do the advanced node info stuff
         if not self.__isAdvNode__(nodeID, nodeData):
@@ -205,38 +215,49 @@ class DataHandler(object):
 
         # neighbours
 
-        # generate type mapping for interface
-        macTypeMapping = {}
-        if 'mesh' in nodeInfo.get('network', {}):
-            for batID, batVal in nodeInfo['network']['mesh'].items():
-                if 'interfaces' in batVal:
-                    for ifType, ifVal in batVal['interfaces'].items():
-                        for mac in ifVal:
-                            macTypeMapping[mac] = ifType
-        # print(macTypeMapping)
-
         # get informations about interfaces and neighbours for both batadv and wifi
+        typeIDincrementor = collections.defaultdict(int)
         for ttype, tvalue in nodeData['neighbours'].items():
             if ttype == 'node_id':
                 continue
             for iname, ivalue in tvalue.items():
                 if 'neighbours' not in ivalue:
                     continue
-                inameid = iname.replace(':', '')
-                if iname in macTypeMapping:
-                    ifPrefix = macTypeMapping[iname]
-                else:
-                    ifPrefix = 'unknown'
-                ifDict = nodeDict[ttype]['interfaces'][''.join((ifPrefix, '_', inameid))]
+                if not iname in self.interfaces:
+                    continue
+                ifPrefix = self.interfaces[iname]['type']
+                typeIDincrementor[ifPrefix] += 1
+                ifDict = nodeDict[ttype]['interfaces'][''.join((ifPrefix, '_', str(typeIDincrementor[ifPrefix])))]
+                ifDict['unknown_neighbours'] = 0
                 for nname, nvalue in ivalue['neighbours'].items():
                     nnameid = nname.replace(':', '')
+                    if nname not in self.interfaces:
+                        ifDict['unknown_neighbours'] += 1
+                        continue
+                    nnodeid = self.interfaces[nname]['nodeID']
                     if nnameid == nodeGateway:
-                        nodeDict[ttype]['gateway'][nnameid] = nvalue
+                        nodeDict[ttype]['gateway'][nnodeid] = nvalue
                     elif nnameid == nodeGatewayNexthop:
-                        nodeDict[ttype]['gateway_nexthop'][nnameid] = nvalue
-                    ifDict['links'][nnameid] = nvalue
+                        nodeDict[ttype]['gateway_nexthop'][nnodeid] = nvalue
+                    ifDict['links'][nnodeid] = nvalue
                 ifDict['count'] = len(ifDict['links'])
             ifDict = nodeDict[ttype]['count'] = len(nodeDict[ttype]['interfaces'])
+
+    def __mapIfIDtoNodeID__(self):
+        ifIDs = {}
+        for nodeID, nodeData in self.data.items():
+            if not 'mesh' in nodeData.get('nodeinfo', {}).get('network', {}):
+                continue
+            for batID, batVal in nodeData['nodeinfo']['network']['mesh'].items():
+                if not 'interfaces' in batVal:
+                    continue
+                for ifType, ifVal in batVal['interfaces'].items():
+                    for mac in ifVal:
+                        ifIDs[mac] = {
+                                'type' : ifType,
+                                'nodeID' : nodeID
+                            }
+        return ifIDs
 
     def __isAdvNode__(self, nodeID, data):
         try:
@@ -260,10 +281,10 @@ class DataHandler(object):
             'clients_online' : collections.defaultdict(int),
             'firmware' : {
                 'release' : collections.defaultdict(int),
-                'base' : collections.defaultdict(int)
+                'base' : collections.defaultdict(int),
+                'branch' : collections.defaultdict(int),
+                'autoupdater_enabled' : 0
             },
-            'branch' : collections.defaultdict(int),
-            'autoupdater_enabled' : 0,
             'hardware' : collections.defaultdict(int),
             'selected_gateway' : collections.defaultdict(DataHandler.__int_dict__),
             'batadv_version' : collections.defaultdict(int)
