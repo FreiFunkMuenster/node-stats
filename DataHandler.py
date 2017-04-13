@@ -216,10 +216,10 @@ class DataHandler(object):
         # neighbours
 
         # get informations about interfaces and neighbours for both batadv and wifi
-        typeIDincrementor = collections.defaultdict(int)
         for ttype, tvalue in nodeData['neighbours'].items():
             if ttype == 'node_id':
                 continue
+            typeIDincrementor = collections.defaultdict(int)
             for iname, ivalue in tvalue.items():
                 if 'neighbours' not in ivalue:
                     continue

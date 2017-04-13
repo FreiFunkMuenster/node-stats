@@ -1,5 +1,5 @@
 {
-	"offline_last_seen_s" : 1200,
+	"offline_last_seen_s" : 600,
 	"graphite_target" : {
 		"server" : "148.251.45.18",
 		"port" : 2003
