@@ -71,6 +71,10 @@ class DataHandler(object):
         # print(self.gatewayIDs)
 
     def __operateNode__(self, nodeID, nodeData):
+
+        if not 'lastseen' in nodeData:
+            # strage nodes (e. g. gateways) in (very) old nodes.json versions
+            return
         if self.dataType == self.TYPE_RAW_JSON:
             nodeLastSeen = datetime.datetime.strptime(nodeData['lastseen'], '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=dateutil.tz.tzutc()).astimezone(dateutil.tz.tzlocal()).replace(tzinfo=None)
         else:
@@ -80,7 +84,7 @@ class DataHandler(object):
 
         nodeInfo = nodeData['nodeinfo']
         nodeStats = nodeData['statistics']
-        site = nodeInfo['system']['site_code']
+        site = nodeInfo.get('system', {}).get('site_code', 'default_site')
 
 
         isInfrastructure = nodeInfo.get('node_type', {}).get('is_infrastructure', False)
