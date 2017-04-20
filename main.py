@@ -32,13 +32,22 @@ def main():
     args = __parseArguments__()
     config = JsonHandler(args.config)
     rawJson = JsonHandler(args.hopglass_raw)
+    #determine type of inpot nodes.json (meshviewer) or raw.json
     rawType = DataHandler.TYPE_NODES_JSON if 'nodes' in rawJson.data else DataHandler.TYPE_RAW_JSON
-        #detected nodes.json instead raw.json
+
     handler = DataHandler(rawJson.data, config.data, args.alternative_now, rawType)
     handler.convert()
+
     graphiteHandler = GraphiteHandler(config.data['graphite_target']['server'], config.data['graphite_target']['port'], args.alternative_now)
     graphiteHandler.prepareMessage(handler.domains, handler.nodes)
-    # print(graphiteHandler.message)
+
+    if args.filter_pattern:
+        graphiteHandler.filterMessage(args.filter_pattern, args.filter_mode)
+
+    if args.print_only:
+        graphiteHandler.printMessage()
+    else:
+        graphiteHandler.sendMessage()
 
 
 def __parseArguments__():
@@ -46,6 +55,8 @@ def __parseArguments__():
     parser.add_argument('-g', '--hopglass-raw', help='Hopglass raw.json source. Default: ./raw.json', default='./raw.json')
     parser.add_argument('-c', '--config', help='node-stats config file location Default: ./config.json', default='./config.json')
     parser.add_argument('-n', '--alternative-now', help='Set a fake now date.', required=False)
+    parser.add_argument('-fp', '--filter-pattern', help='Filter generated messages by given (regex) pattern.', required=False)
+    parser.add_argument('-fm', '--filter-mode', help='normal: Only include if filter matches, inverse: exclude if filter matches.', default='normal')
     parser.add_argument('-p', '--print-only', help='Print only', action='store_true')
     
     return parser.parse_args()

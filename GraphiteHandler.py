@@ -25,13 +25,14 @@
 
 import socket
 import datetime
+import re
 
 
 class GraphiteHandler(object):
+
     def __init__(self, server, port, alternative_now = None):
         self.server = server
         self.port = port
-        self.message = ''
         self.entries = []
         self.specialChars = dict.fromkeys(map(ord, ' +.\\/-'), '_')
 
@@ -40,11 +41,15 @@ class GraphiteHandler(object):
         else:
             self.utc_stamp_now = datetime.datetime.now().strftime("%s")
 
+    @property
+    def message(self):
+        return ''.join(self.entries)
+
     def prepareMessage(self, domains, nodes):
         self.__nestedWalker__('nodes', domains)
         self.__nestedWalker__('node', nodes)
-        self.message = self.message.join(self.entries)
-        self.send(self.message)
+        # print(self.message)
+        # self.send(self.message)
 
     def __nestedWalker__(self, prefix, tree):
         if isinstance(tree, dict):
@@ -54,9 +59,28 @@ class GraphiteHandler(object):
             # credits to https://wiki.python.org/moin/PythonSpeed/PerformanceTips#String_Concatenation
             self.entries.append(''.join((prefix, ' ', str(tree), ' ', self.utc_stamp_now , '\n')))
 
-    def send(self, message):
-        print("hi")
+    def filterMessage(self, pattern, fMode = 'normal', fType = 'graphite_filter'):
+        if fType == 'graphite_filter':
+            self.__graphiteFilter__(pattern, fMode)
+        else:
+            raise Exception('Selected filter type is not implemented, yet.')
+
+
+    def __graphiteFilter__(self, pattern, fMode):
+        inverse = True if fMode == 'inverse' else False
+        regex = re.compile(pattern)
+        filteredEntries = []
+        for entry in self.entries:
+            match = regex.search(entry)
+            if match and not inverse or inverse and not match:
+                filteredEntries.append(entry)
+        self.entries = filteredEntries
+
+    def printMessage(self):
+        print(self.message)
+
+    def sendMessage(self):
         sock = socket.socket()
         sock.connect((self.server, int(self.port)))
-        sock.sendall(message.encode())
+        sock.sendall(self.message.encode())
         sock.close()

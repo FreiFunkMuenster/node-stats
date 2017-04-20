@@ -13,8 +13,9 @@ This script can be configured via ``config.json`` (see below). However some feat
 ### CLI Arguments
 
 ```text
-# ./main.py -h
-usage: main.py [-h] [-g HOPGLASS_RAW] [-c CONFIG] [-p]
+# ./main.py --help
+usage: main.py [-h] [-g HOPGLASS_RAW] [-c CONFIG] [-n ALTERNATIVE_NOW]
+               [-fp FILTER_PATTERN] [-fm FILTER_MODE] [-p]
 
 This Script is a link between Hopglass-Server and Graphite.
 
@@ -24,7 +25,15 @@ optional arguments:
                         Hopglass raw.json source. Default: ./raw.json
   -c CONFIG, --config CONFIG
                         node-stats config file location Default: ./config.json
+  -n ALTERNATIVE_NOW, --alternative-now ALTERNATIVE_NOW
+                        Set a fake now date.
+  -fp FILTER_PATTERN, --filter-pattern FILTER_PATTERN
+                        Filter generated messages by given (regex) pattern.
+  -fm FILTER_MODE, --filter-mode FILTER_MODE
+                        normal: Only include if filter matches, inverse:
+                        exclude if filter matches.
   -p, --print-only      Print only
+
   ```
 
 ### config.json
