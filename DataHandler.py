@@ -223,15 +223,12 @@ class DataHandler(object):
         for ttype, tvalue in nodeData['neighbours'].items():
             if ttype == 'node_id':
                 continue
-            typeIDincrementor = collections.defaultdict(int)
             for iname, ivalue in tvalue.items():
                 if 'neighbours' not in ivalue:
                     continue
                 if not iname in self.interfaces:
                     continue
-                ifPrefix = self.interfaces[iname]['type']
-                typeIDincrementor[ifPrefix] += 1
-                ifDict = nodeDict[ttype]['interfaces'][''.join((ifPrefix, '_', str(typeIDincrementor[ifPrefix])))]
+                ifDict = nodeDict[ttype]['interfaces'][self.interfaces[iname]['prefix']]
                 ifDict['unknown_neighbours'] = 0
                 for nname, nvalue in ivalue['neighbours'].items():
                     nnameid = nname.replace(':', '')
@@ -252,13 +249,17 @@ class DataHandler(object):
         for nodeID, nodeData in self.data.items():
             if not 'mesh' in nodeData.get('nodeinfo', {}).get('network', {}):
                 continue
+
             for batID, batVal in nodeData['nodeinfo']['network']['mesh'].items():
                 if not 'interfaces' in batVal:
                     continue
                 for ifType, ifVal in batVal['interfaces'].items():
+                    uSuffix = 0
                     for mac in ifVal:
+                        uSuffix += 1
                         ifIDs[mac] = {
                                 'type' : ifType,
+                                'prefix' : ''.join((ifType, '_', str(uSuffix))),
                                 'nodeID' : nodeID
                             }
         return ifIDs
@@ -268,14 +269,6 @@ class DataHandler(object):
             return nodeID in self.advNodeIDs or data['nodeinfo']['advanced-stats']['store-stats']
         except:
             return False
-
-    def __readAdvancedNodesFile__(self, filename):
-        advnodes = list()
-        if os.path.isfile(filename):
-            with open(filename) as f:
-                for line in f:
-                    advnodes.append(line.split()[0])
-        return advnodes
 
     @staticmethod
     def __domain_dict__():
