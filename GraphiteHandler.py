@@ -54,7 +54,8 @@ class GraphiteHandler(object):
     def __nestedWalker__(self, prefix, tree):
         if isinstance(tree, dict):
             for k, v in tree.items():
-                self.__nestedWalker__(''.join((prefix, '.', k.translate(self.specialChars))), v)
+                if k:
+                    self.__nestedWalker__(''.join((prefix, '.', k.translate(self.specialChars))), v)
         else:
             # credits to https://wiki.python.org/moin/PythonSpeed/PerformanceTips#String_Concatenation
             self.entries.append(''.join((prefix, ' ', str(tree), ' ', self.utc_stamp_now , '\n')))
