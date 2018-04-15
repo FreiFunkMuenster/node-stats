@@ -175,7 +175,7 @@ class DataHandler(object):
                 if 'version' in sw.get('batman-adv', {}):
                     siteDict['batadv_version'][sw['batman-adv']['version']] += 1
 
-                if 'autoupdater' in sw:
+                if 'autoupdater' in sw and sw['autoupdater']:
                     if 'branch' in sw['autoupdater']:
                         siteDict['firmware']['branch'][sw['autoupdater']['branch']] += 1
                     if sw['autoupdater']['enabled']:
