@@ -1,7 +1,7 @@
 {
 	"offline_last_seen_s" : 600,
 	"graphite_target" : {
-		"server" : "217.197.83.217",
+		"server" : "stats.ffmsl.de",
 		"port" : 2003
 	},
 	"adv_node_stats" : [
