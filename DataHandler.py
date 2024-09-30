@@ -3,6 +3,7 @@
 # MIT License
 
 # Copyright (c) 2017 Simon Wüllhorst
+# Copyright (c) 2024 Robin Weiligmann
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -84,7 +85,7 @@ class DataHandler(object):
 
         nodeInfo = nodeData['nodeinfo']
         nodeStats = nodeData['statistics']
-        site = nodeInfo.get('system', {}).get('site_code', 'default_site')
+        site = nodeInfo.get('system', {}).get('domain_code', nodeInfo.get('system', {}).get('site_code', 'default_site'))
 
 
         isInfrastructure = nodeInfo.get('node_type', {}).get('is_infrastructure', False)
