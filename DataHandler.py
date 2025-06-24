@@ -33,10 +33,13 @@ import dateutil.tz
 class DataHandler(object):
     TYPE_RAW_JSON = 0
     TYPE_NODES_JSON = 1
+    TYPE_RAW_JSON_YANIC = 2
 
     def __init__(self, jsonData, config, alternative_now = None, jsonDataType = 0):
         if jsonDataType == DataHandler.TYPE_NODES_JSON:
             self.data = jsonData['nodes']
+        elif jsonDataType == DataHandler.TYPE_RAW_JSON_YANIC:
+            self.data = {node['nodeinfo']['node_id']: node for node in jsonData['nodes'] if 'nodeinfo' in node and 'node_id' in node['nodeinfo']}
         else:
             self.data = jsonData
 
@@ -78,6 +81,8 @@ class DataHandler(object):
             return
         if self.dataType == self.TYPE_RAW_JSON:
             nodeLastSeen = datetime.datetime.strptime(nodeData['lastseen'], '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=dateutil.tz.tzutc()).astimezone(dateutil.tz.tzlocal()).replace(tzinfo=None)
+        elif self.dataType == self.TYPE_RAW_JSON_YANIC:
+            nodeLastSeen = datetime.datetime.strptime(nodeData['lastseen'], '%Y-%m-%dT%H:%M:%S%z').replace(tzinfo=dateutil.tz.tzutc()).astimezone(dateutil.tz.tzlocal()).replace(tzinfo=None)
         else:
             nodeLastSeen = datetime.datetime.strptime(nodeData['lastseen'], '%Y-%m-%dT%H:%M:%S').replace(tzinfo=dateutil.tz.tzutc()).astimezone(dateutil.tz.tzlocal()).replace(tzinfo=None)
 
@@ -116,7 +121,7 @@ class DataHandler(object):
             if 'location' in nodeInfo:
                 siteDict['nodes_count']['has_location'] += 1
 
-            if 'contact' in nodeInfo.get('owner', {}):
+            if 'contact' in (nodeInfo.get('owner', {}) or {}):
                 siteDict['nodes_count']['has_contact'] += 1
 
             # avg stats
@@ -125,7 +130,7 @@ class DataHandler(object):
                     siteDict['averages'][key].append(nodeStats[key])
 
             # avg gateway and gateway_nexthop tq
-            if 'batadv' in nodeData['neighbours']:
+            if 'batadv' in (nodeData.get('neighbours', {}) or {}):
                 for iname, ivalue in nodeData['neighbours']['batadv'].items():
                     if 'neighbours' not in ivalue:
                         continue
@@ -177,10 +182,10 @@ class DataHandler(object):
                     siteDict['batadv_version'][sw['batman-adv']['version']] += 1
 
                 if 'autoupdater' in sw and sw['autoupdater']:
-                    if 'branch' in sw['autoupdater']:
-                        siteDict['firmware']['branch'][sw['autoupdater']['branch']] += 1
-                    if sw['autoupdater']['enabled']:
+                    if sw['autoupdater'].get('enabled', False):
                         siteDict['firmware']['autoupdater_enabled'] += 1
+                        if 'branch' in sw['autoupdater']:
+                            siteDict['firmware']['branch'][sw['autoupdater']['branch']] += 1
 
         # do the advanced node info stuff
         if not self.__isAdvNode__(nodeID, nodeData):
@@ -221,8 +226,10 @@ class DataHandler(object):
         # neighbours
 
         # get informations about interfaces and neighbours for both batadv and wifi
-        for ttype, tvalue in nodeData['neighbours'].items():
+        for ttype, tvalue in (nodeData.get('neighbours', {}) or {}).items():
             if ttype == 'node_id':
+                continue
+            if not tvalue:
                 continue
             for iname, ivalue in tvalue.items():
                 if 'neighbours' not in ivalue:
@@ -267,7 +274,15 @@ class DataHandler(object):
 
     def __isAdvNode__(self, nodeID, data):
         try:
-            return nodeID in self.advNodeIDs or data['nodeinfo']['advanced-stats']['store-stats']
+            if nodeID in self.advNodeIDs:
+                return True
+
+            store_stats = data.get('nodeinfo', {}).get('advanced-stats', {}).get('store-stats')
+            custom_stats = data.get('custom_fields', {}).get('advanced-stats')
+
+            if store_stats or custom_stats:
+                return True
+            return False
         except:
             return False
 

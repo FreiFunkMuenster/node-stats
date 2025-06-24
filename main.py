@@ -33,8 +33,11 @@ def main():
     config = JsonHandler(args.config)
     rawJson = JsonHandler(args.hopglass_raw)
     #determine type of inpot nodes.json (meshviewer) or raw.json
-    rawType = DataHandler.TYPE_NODES_JSON if 'nodes' in rawJson.data else DataHandler.TYPE_RAW_JSON
-
+    rawType = (
+        DataHandler.TYPE_RAW_JSON_YANIC if args.yanic_raw
+        else DataHandler.TYPE_NODES_JSON if 'nodes' in rawJson.data
+        else DataHandler.TYPE_RAW_JSON
+    )
     handler = DataHandler(rawJson.data, config.data, args.alternative_now, rawType)
     handler.convert()
 
@@ -53,6 +56,7 @@ def main():
 def __parseArguments__():
     parser = argparse.ArgumentParser(description='This Script is a link between Hopglass-Server and Graphite.')
     parser.add_argument('-g', '--hopglass-raw', help='Hopglass raw.json source. Default: ./raw.json', default='./raw.json')
+    parser.add_argument('-yr', '--yanic-raw', help='Yanic raw.json source. Default: off', default=False, required=False, action='store_true')
     parser.add_argument('-c', '--config', help='node-stats config file location Default: ./config.json', default='./config.json')
     parser.add_argument('-n', '--alternative-now', help='Set a fake now date.', required=False)
     parser.add_argument('-fp', '--filter-pattern', help='Filter generated messages by given (regex) pattern.', required=False)
