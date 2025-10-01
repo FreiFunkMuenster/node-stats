@@ -280,6 +280,9 @@ class DataHandler(object):
             store_stats = data.get('nodeinfo', {}).get('advanced-stats', {}).get('store-stats')
             custom_stats = data.get('custom_fields', {}).get('advanced-stats')
 
+            if type(custom_stats) is str:
+                custom_stats = json.loads(custom_stats.lower())
+
             if store_stats or custom_stats:
                 return True
             return False
